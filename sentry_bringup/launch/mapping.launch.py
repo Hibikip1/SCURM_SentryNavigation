@@ -42,9 +42,22 @@ def generate_launch_description():
   )
 
   # mid360
-  mid360_node = IncludeLaunchDescription(
-      PythonLaunchDescriptionSource([os.path.join(
-          get_package_share_directory('livox_ros_driver2'), 'launch_ROS2', 'msg_MID360_launch.py')])
+  mid360_node = Node(
+    package='livox_ros_driver2',
+    executable='livox_ros_driver2_node',
+    name='livox_lidar_publisher',
+    output='screen',
+    parameters=[{
+        "xfer_format": 1,  # 由1改为0，发布PointCloud2
+        "multi_topic": 0,
+        "data_src": 0,
+        "publish_freq": 10.0,
+        "output_data_type": 0,
+        "frame_id": "sensor",
+        "lvx_file_path": "/home/livox/livox_test.lvx",
+        "user_config_path": "/home/lab/nav_tutorial_ws/src/livox_ros_driver2/config/MID360_config.json",
+        "cmdline_input_bd_code": "livox0000000001"
+    }]
   )
   
   # fast-lio localization   

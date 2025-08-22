@@ -1,7 +1,7 @@
 tree_exec:
   ros__parameters:
-    tree_node_model_export_path: /home/sentry_ws/src/rm_decision_cpp/behavior_tree/tree_nodes.xml
-    tree_xml_file: /home/sentry_ws/src/rm_decision_cpp/behavior_tree/RMUC_red.xml
+    tree_node_model_export_path: /home/lab/nav_tutorial_ws/src/rm_decision_cpp/behavior_tree/tree_nodes.xml
+    tree_xml_file: /home/lab/nav_tutorial_ws/src/rm_decision_cpp/behavior_tree/RMUC_red.xml
     tick_period_milliseconds: 100
     groot_port: 5556
     attack_distance: 2.0

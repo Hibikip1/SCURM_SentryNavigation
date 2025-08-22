@@ -1,0 +1,22 @@
+can_bridge_node:
+  ros__parameters:
+    can_interface: "vcan0"  # CAN interface name (virtual CAN for testing)
+    simulate_hardware: true  # Enable simulation mode for testing without actual hardware
+    
+    # CAN protocol definitions
+    can_frame_ids:
+      # From STM32 to ROS2
+      imu_data: 0x100
+      odom_data: 0x101
+      game_state: 0x102
+      gimbal_state: 0x103
+      shooter_state: 0x104
+      
+      # From ROS2 to STM32
+      chassis_cmd: 0x200
+      gimbal_cmd: 0x201
+      shooter_cmd: 0x202
+      mode_switch: 0x203
+      system_cmd: 0x204
+    
+    # Topic remappings can be done in launch file if needed
