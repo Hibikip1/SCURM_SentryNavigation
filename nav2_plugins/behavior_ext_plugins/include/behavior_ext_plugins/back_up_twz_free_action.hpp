@@ -45,6 +45,7 @@ private:
   double twist_x_, twist_y_;
   double max_radius_, robot_radius_;
   int free_threshold_;
+  double cost_threshold_;
   bool visualization_;
 
   // nav_msgs::msg::Odometry::SharedPtr odom_;

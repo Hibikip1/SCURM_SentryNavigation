@@ -1,6 +1,8 @@
 # rm_decision
 a robot decision module base on BehaviorTree.CPP and ROS2
 
+> 25赛季更新：结合自身区域判断的追击，多条件补给点选择（可参考思路修改根据不同的血量、允许发弹量、当前位置、建筑物血量等等，也能设定不同的nav_goal以利用25赛季复活赛&全国赛的前哨站
+
 ## 1. Install BehaviorTree.CPP
 
 ### 1.1 Install from source

@@ -53,6 +53,11 @@ namespace nav2_behaviors
 
     nav2_util::declare_parameter_if_not_declared(
       node,
+      "cost_threshold", rclcpp::ParameterValue(0.1));
+    node->get_parameter("cost_threshold", cost_threshold_);
+
+    nav2_util::declare_parameter_if_not_declared(
+      node,
       "visualization", rclcpp::ParameterValue(false));
     node->get_parameter("visualization", visualization_);
     
@@ -148,7 +153,7 @@ namespace nav2_behaviors
           auto distance_to_center = std::hypot(x - pose_x, y - pose_y);
           if (distance_to_center <= radius)
           {
-            if (costmap.data[costmap_index] == 0)
+            if (costmap.data[costmap_index] <= cost_threshold_)
             {
               free_space_sum++;
               free_points.push_back(geometry_msgs::msg::Point());
