@@ -13,9 +13,18 @@
             <output_port name="attack_pose" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
             <input_port name="target_position" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;"/>
         </Action>
+        <Action ID="ChassisTypePublisher">
+            <input_port name="chassis_cmd" type="signed char">Chassis type value (0-127)</input_port>
+        </Action>
         <Action ID="ControlGimbal">
             <input_port name="goal" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">goal pose in map frame.</input_port>
         </Action>
+        <Decorator ID="IsInPosition">
+            <input_port name="p4" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">Fourth point of parallelogram</input_port>
+            <input_port name="p3" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">Third point of parallelogram</input_port>
+            <input_port name="p2" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">Second point of parallelogram</input_port>
+            <input_port name="p1" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">First point of parallelogram</input_port>
+        </Decorator>
         <Action ID="Nav2Pose">
             <input_port name="goal" type="geometry_msgs::msg::PoseStamped_&lt;std::allocator&lt;void&gt; &gt;">goal send to navigator.</input_port>
         </Action>
