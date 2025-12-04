@@ -16,7 +16,7 @@ def generate_launch_description():
         executable='sac_ia_gicp',
         name='sac_ia_gicp_node',
         parameters=[
-            {'target_pcd_file': "/home/sentry_ws/src/sentry_bringup/maps/GlobalMap.pcd"},
+            {'target_pcd_file': "/home/lab/nav_tutorial_ws/test_xyz.pcd"},
             {'num_threads': 8},
             {'k_serach_source': 100},
             {'k_serach_target': 100},

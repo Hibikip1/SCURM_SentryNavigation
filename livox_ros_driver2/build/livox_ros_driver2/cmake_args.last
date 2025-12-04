@@ -1,0 +1,1 @@
+['-DCMAKE_INSTALL_PREFIX=/home/hibikip/nav_tutorial_ws/src/livox_ros_driver2/install', '-DAMENT_CMAKE_SYMLINK_INSTALL=1']
