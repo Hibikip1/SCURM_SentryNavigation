@@ -1,1 +1,0 @@
-This example is only meant to be run on X8PI product, with Raspberry Pi 4B connected over 40Pin connector.

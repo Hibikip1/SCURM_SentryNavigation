@@ -79,11 +79,18 @@ def generate_launch_description():
             start_decision
         ]
     )
+
+    robotcan_pkg_launch = Node(
+        package= "robotcan_pkg",
+        executable= "sentinel_can_node",
+
+    )
     
     ld = LaunchDescription()
 
     ld.add_action(start_relocalization)
     ld.add_action(delayed_start_navigation)
     ld.add_action(delayed_start_decision)  # 不用自动决策的时候这个不用开
+    ld.add_action(robotcan_pkg_launch)
 
     return ld

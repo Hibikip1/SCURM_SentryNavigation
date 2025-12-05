@@ -26,7 +26,7 @@ public:
   {
     // params (可通过 launch/param 覆盖)
     this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel_in_yaw");
-    this->declare_parameter<int>("chassis_cmd_id", 0x200);
+    this->declare_parameter<int>("chassis_cmd_id", 0x400);
     this->declare_parameter<int>("mode_switch_id", 0x203);
     this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x301, 0x302, 0x303});
 
