@@ -17,11 +17,22 @@ public:
     BM_StatusTypeDef can_send(BM_ChannelHandle bm_channel, int device_id, uint8_t* txdata, int timeout);
     BM_StatusTypeDef can_receive(BM_ChannelHandle bm_channel, BM_CanMessageTypeDef &msg, int timeout_ms);
     BM_StatusTypeDef can_receive(BM_ChannelHandle bm_channel, int device_id, uint8_t* rxdata, int timeout_ms=10);
+    
+    // 新增：缓冲区管理和错误恢复
+    BM_StatusTypeDef clear_buffer(BM_ChannelHandle bm_channel);
+    BM_StatusTypeDef reset_channel(BM_ChannelHandle bm_channel);
+    BM_StatusTypeDef get_status(BM_ChannelHandle bm_channel, BM_CanStatusInfoTypedef* statusinfo);
+    
 private:
     // 总线上设备信息
     int nchannels;
     BM_ChannelInfoTypeDef channelinfos[32];
     BM_StatusTypeDef error;
     BM_NotificationHandle notification;
+    
+    // 统计信息
+    uint32_t tx_error_count;
+    uint32_t rx_timeout_count;
+    uint32_t last_clear_time_ms;
 };
 #endif

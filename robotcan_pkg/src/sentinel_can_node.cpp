@@ -25,8 +25,9 @@ public:
   : Node("sentinel_can_node")
   {
     // params (可通过 launch/param 覆盖)
-//    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel_in_yaw");
-    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
+    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel_in_yaw");
+//    this->declare_parameter<std::string>("cmd_vel_topic", "/chassis_cmd");
+//    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
     this->declare_parameter<int>("chassis_cmd_id", 0x520);
     this->declare_parameter<int>("mode_switch_id", 0x203);
     this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x301, 0x302, 0x303});
@@ -96,6 +97,10 @@ private:
   rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr mode_sub_;
   rclcpp::Publisher<rm_interfaces::msg::GameState>::SharedPtr game_state_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
+  
+  // 健康监测
+  int health_check_counter_ = 0;
+  static constexpr int HEALTH_CHECK_INTERVAL = 600; // 每 30 秒检查一次（50ms * 600）
 
   // 将 Twist 编码为 8 字节 CAN 帧（示例协议）：
   // Byte0: control type (1 = VELOCITY)
@@ -140,6 +145,27 @@ private:
   void timer_poll_can()
   {
     if (!can_opened_) return;
+    
+    // 定期健康检查
+    health_check_counter_++;
+    if (health_check_counter_ >= HEALTH_CHECK_INTERVAL) {
+      health_check_counter_ = 0;
+      
+      // 获取 CAN 状态
+      BM_CanStatusInfoTypedef status;
+      BM_StatusTypeDef ret = canbus_.get_status(channel_, &status);
+      if (ret == BM_ERROR_OK) {
+        RCLCPP_INFO(this->get_logger(), 
+          "CAN 状态: TEC=%u, REC=%u, BUSOFF=%u, TXBP=%u, RXBP=%u",
+          status.TEC, status.REC, status.TXBO, status.TXBP, status.RXBP);
+        
+        // 如果总线关闭或错误严重，重置通道
+        if (status.TXBO || status.TEC > 200 || status.REC > 200) {
+          RCLCPP_WARN(this->get_logger(), "检测到 CAN 错误状态，重置通道...");
+          canbus_.reset_channel(channel_);
+        }
+      }
+    }
 
     // 我们假设裁判数据通过三个帧发送并合并成一个 GameState
     // 帧映射（示例）：

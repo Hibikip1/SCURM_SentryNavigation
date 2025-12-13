@@ -1,10 +1,16 @@
 #include "bmcan_bus.hpp"
 #include <regex>
+#include <chrono>
 
 BMCANTool::BMCANTool(){
     /*初始化bmapi lib*/
     std::cout << "Initializing BMCAN Tool..." << std::endl;
     std::cout << "Initializing BMAPI libary..." << std::endl;
+    
+    // 初始化统计
+    tx_error_count = 0;
+    rx_timeout_count = 0;
+    last_clear_time_ms = 0;
 
     error = BM_Init();
     if (error != BM_ERROR_OK)
@@ -112,6 +118,8 @@ BM_StatusTypeDef BMCANTool::can_send(BM_ChannelHandle bm_channel, int device_id,
   
     msg.id.SID = device_id;
     msg.ctrl.tx.DLC = 0x08;
+    msg.ctrl.tx.FDF = 0;  // CAN2.0 模式（非 FD）
+    msg.ctrl.tx.BRS = 0;  // 不使用位速率切换
 
     for(int i = 0; i < 8; i++)
     {
@@ -131,12 +139,25 @@ BM_StatusTypeDef BMCANTool::can_send(BM_ChannelHandle bm_channel, int device_id,
 		if (error == BM_ERROR_BUSTIMEOUT)
 		{
 			printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送超时\033[0m\n");
+      tx_error_count++;
+      
+      // 连续超时 5 次后清空缓冲区
+      if (tx_error_count >= 5) {
+        printf("\033[33m[DEBUG][CANTX]\033[0m \033[33m连续超时，清空缓冲区...\033[0m\n");
+        BM_ClearBuffer(bm_channel);
+        tx_error_count = 0;
+      }
       // printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送失败 通道:%d, 设备id:0x%03X, 错误:0x%08X.\033[0m\n", bm_channel, device_id, error);
 		}
 		else if (BM_ERROR_OK != error)
 		{
 			// printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送失败 错误:0x%08X.\033[0m\n", error);
+      tx_error_count++;
 		}
+    else {
+      // 发送成功，重置计数
+      tx_error_count = 0;
+    }
     return error;
 }
 
@@ -159,7 +180,23 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
   BM_CanMessageTypeDef msg;
   memset(&msg, 0, sizeof(msg));
   int found = 0;
-  int max_read = 20; // 防止死循环
+  int max_read = 10; // 减少到 10 次，避免过度轮询
+  int unmatched_count = 0;
+
+  // 定期清理缓冲区（每 30 秒）
+  static uint32_t start_time_ms = 0;
+  if (start_time_ms == 0) {
+    start_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count();
+  }
+  uint32_t current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+    std::chrono::steady_clock::now().time_since_epoch()).count();
+  
+  if (current_time_ms - last_clear_time_ms > 30000) { // 30秒
+    printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m定期清理缓冲区...\033[0m\n");
+    BM_ClearBuffer(bm_channel);
+    last_clear_time_ms = current_time_ms;
+  }
 
   for (int i = 0; i < max_read; ++i) {
     BM_StatusTypeDef ret = this->can_receive(bm_channel, msg, i == 0 ? timeout_ms : 0); // 只有第一次等timeout
@@ -167,17 +204,63 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
       if (msg.id.SID == device_id && msg.ctrl.rx.DLC == 8) {
         for(int j=0; j<8; ++j) rxdata[j] = msg.payload[j];
         found = 1;
-        // 不break，继续把队列清空
+        break; // 找到目标帧后立即返回，不再清空队列
+      } else {
+        unmatched_count++;
       }
     } else {
       break; // 没有更多新帧
     }
   }
+  
+  // 如果不匹配帧过多，清空缓冲区
+  if (unmatched_count > 5) {
+    printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m不匹配帧过多(%d)，清空缓冲区...\033[0m\n", unmatched_count);
+    BM_ClearBuffer(bm_channel);
+  }
+  
   if (!found) {
     for(int i=0; i<8; ++i) rxdata[i] = 0;
+    rx_timeout_count++;
+    
+    // 连续超时 10 次后重置通道
+    if (rx_timeout_count >= 10) {
+      printf("\033[31m[DEBUG][CANRX]\033[0m \033[31m连续接收超时，重置通道...\033[0m\n");
+      this->reset_channel(bm_channel);
+      rx_timeout_count = 0;
+    }
     return BM_ERROR_BUSTIMEOUT;
   }
+  
+  rx_timeout_count = 0; // 接收成功，重置计数
   return BM_ERROR_OK;
+}
+
+BM_StatusTypeDef BMCANTool::clear_buffer(BM_ChannelHandle bm_channel) {
+  BM_StatusTypeDef ret = BM_ClearBuffer(bm_channel);
+  if (ret == BM_ERROR_OK) {
+    printf("\033[32m[DEBUG][CAN]\033[0m \033[32m缓冲区已清空\033[0m\n");
+  } else {
+    printf("\033[31m[DEBUG][CAN]\033[0m \033[31m清空缓冲区失败: 0x%08X\033[0m\n", ret);
+  }
+  return ret;
+}
+
+BM_StatusTypeDef BMCANTool::reset_channel(BM_ChannelHandle bm_channel) {
+  BM_StatusTypeDef ret = BM_Reset(bm_channel);
+  if (ret == BM_ERROR_OK) {
+    printf("\033[32m[DEBUG][CAN]\033[0m \033[32m通道已重置\033[0m\n");
+    // 重置后清空统计
+    tx_error_count = 0;
+    rx_timeout_count = 0;
+  } else {
+    printf("\033[31m[DEBUG][CAN]\033[0m \033[31m重置通道失败: 0x%08X\033[0m\n", ret);
+  }
+  return ret;
+}
+
+BM_StatusTypeDef BMCANTool::get_status(BM_ChannelHandle bm_channel, BM_CanStatusInfoTypedef* statusinfo) {
+  return BM_GetStatus(bm_channel, statusinfo);
 }
 
 BMCANTool::~BMCANTool(){
