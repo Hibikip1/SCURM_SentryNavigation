@@ -15,22 +15,18 @@ public:
 private:
     void listener_callback(const sensor_msgs::msg::Imu::UniquePtr msg)
     {
-        // Create a quaternion for the rotation
-        tf2::Quaternion rotation_quaternion;
-        rotation_quaternion.setRPY(3.14159, 0, 0);  // 180 degrees in radians
+        // mid360为平方IMU，不需要旋转，以下为原有旋转相关代码，已注释：
+        // tf2::Quaternion rotation_quaternion;
+        // rotation_quaternion.setRPY(3.14159, 0, 0);  // 180 degrees in radians
+        // msg->orientation.x = 0.0;
+        // msg->orientation.y = 0.0;
+        // msg->orientation.z = 0.0;
+        // msg->orientation.w = 1.0;
+        // msg->angular_velocity.z = -msg->angular_velocity.z;
+        // msg->linear_acceleration.y = -msg->linear_acceleration.y;
+        // msg->linear_acceleration.z = -msg->linear_acceleration.z;
 
-        // Rotate the orientation of the IMU data
-        msg->orientation.x = 0.0;
-        msg->orientation.y = 0.0;
-        msg->orientation.z = 0.0;
-        msg->orientation.w = 1.0;
-
-        msg->angular_velocity.z = -msg->angular_velocity.z;
-
-        msg->linear_acceleration.y = -msg->linear_acceleration.y;
-        msg->linear_acceleration.z = -msg->linear_acceleration.z;
-
-        // Publish the rotated IMU data
+        // 直接转发原始IMU数据
         publisher_->publish(*msg);
     }
 

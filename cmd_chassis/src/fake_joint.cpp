@@ -26,11 +26,10 @@ private:
         transform->transform.translation.x = msg->pose.pose.position.x;
         transform->transform.translation.y = msg->pose.pose.position.y;
         transform->transform.translation.z = msg->pose.pose.position.z;
-        // 使用 odometry 消息中的真实姿态（包含底盘旋转角度）
-        transform->transform.rotation.x = msg->pose.pose.orientation.x;
-        transform->transform.rotation.y = msg->pose.pose.orientation.y;
-        transform->transform.rotation.z = msg->pose.pose.orientation.z;
-        transform->transform.rotation.w = msg->pose.pose.orientation.w;
+        transform->transform.rotation.x = 0.0;
+        transform->transform.rotation.y = 0.0;
+        transform->transform.rotation.z = 0.0;
+        transform->transform.rotation.w = 1.0;
 
         // Publish the transform
         broadcaster_->sendTransform(*transform);

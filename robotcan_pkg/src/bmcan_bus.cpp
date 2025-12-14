@@ -126,11 +126,11 @@ BM_StatusTypeDef BMCANTool::can_send(BM_ChannelHandle bm_channel, int device_id,
       msg.payload[i] = txdata[i];
     }
     // printf("sizeof int: %d\n", sizeof(int));
-    printf("\033[36m[DEBUG][CANTX]\033[0m id: 0x%X, msg.payload[0-7]: ", msg.id.SID);
-    for (int i = 0; i < 8; ++i) {
-      printf("0x%02X ", msg.payload[i]);
-    }
-    printf("\n");
+    // printf("\033[36m[DEBUG][CANTX]\033[0m id: 0x%X, msg.payload[0-7]: ", msg.id.SID);
+    // for (int i = 0; i < 8; ++i) {
+    //   printf("0x%02X ", msg.payload[i]);
+    // }
+    // printf("\n");
     
     uint32_t timestamp = 0;
 		BM_GetTimestamp(bm_channel, &timestamp);
@@ -138,12 +138,12 @@ BM_StatusTypeDef BMCANTool::can_send(BM_ChannelHandle bm_channel, int device_id,
 		error = BM_WriteCanMessage(bm_channel, &msg, 0, timeout, &timestamp);
 		if (error == BM_ERROR_BUSTIMEOUT)
 		{
-			printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送超时\033[0m\n");
+			//printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送超时\033[0m\n");
       tx_error_count++;
       
       // 连续超时 5 次后清空缓冲区
       if (tx_error_count >= 5) {
-        printf("\033[33m[DEBUG][CANTX]\033[0m \033[33m连续超时，清空缓冲区...\033[0m\n");
+        //printf("\033[33m[DEBUG][CANTX]\033[0m \033[33m连续超时，清空缓冲区...\033[0m\n");
         BM_ClearBuffer(bm_channel);
         tx_error_count = 0;
       }
@@ -193,7 +193,7 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
     std::chrono::steady_clock::now().time_since_epoch()).count();
   
   if (current_time_ms - last_clear_time_ms > 30000) { // 30秒
-    printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m定期清理缓冲区...\033[0m\n");
+    //printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m定期清理缓冲区...\033[0m\n");
     BM_ClearBuffer(bm_channel);
     last_clear_time_ms = current_time_ms;
   }
@@ -215,7 +215,7 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
   
   // 如果不匹配帧过多，清空缓冲区
   if (unmatched_count > 5) {
-    printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m不匹配帧过多(%d)，清空缓冲区...\033[0m\n", unmatched_count);
+    //printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m不匹配帧过多(%d)，清空缓冲区...\033[0m\n", unmatched_count);
     BM_ClearBuffer(bm_channel);
   }
   
@@ -225,7 +225,7 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
     
     // 连续超时 10 次后重置通道
     if (rx_timeout_count >= 10) {
-      printf("\033[31m[DEBUG][CANRX]\033[0m \033[31m连续接收超时，重置通道...\033[0m\n");
+      //printf("\033[31m[DEBUG][CANRX]\033[0m \033[31m连续接收超时，重置通道...\033[0m\n");
       this->reset_channel(bm_channel);
       rx_timeout_count = 0;
     }
@@ -239,9 +239,9 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
 BM_StatusTypeDef BMCANTool::clear_buffer(BM_ChannelHandle bm_channel) {
   BM_StatusTypeDef ret = BM_ClearBuffer(bm_channel);
   if (ret == BM_ERROR_OK) {
-    printf("\033[32m[DEBUG][CAN]\033[0m \033[32m缓冲区已清空\033[0m\n");
+    //printf("\033[32m[DEBUG][CAN]\033[0m \033[32m缓冲区已清空\033[0m\n");
   } else {
-    printf("\033[31m[DEBUG][CAN]\033[0m \033[31m清空缓冲区失败: 0x%08X\033[0m\n", ret);
+    //printf("\033[31m[DEBUG][CAN]\033[0m \033[31m清空缓冲区失败: 0x%08X\033[0m\n", ret);
   }
   return ret;
 }
@@ -249,12 +249,12 @@ BM_StatusTypeDef BMCANTool::clear_buffer(BM_ChannelHandle bm_channel) {
 BM_StatusTypeDef BMCANTool::reset_channel(BM_ChannelHandle bm_channel) {
   BM_StatusTypeDef ret = BM_Reset(bm_channel);
   if (ret == BM_ERROR_OK) {
-    printf("\033[32m[DEBUG][CAN]\033[0m \033[32m通道已重置\033[0m\n");
+    //printf("\033[32m[DEBUG][CAN]\033[0m \033[32m通道已重置\033[0m\n");
     // 重置后清空统计
     tx_error_count = 0;
     rx_timeout_count = 0;
   } else {
-    printf("\033[31m[DEBUG][CAN]\033[0m \033[31m重置通道失败: 0x%08X\033[0m\n", ret);
+    //printf("\033[31m[DEBUG][CAN]\033[0m \033[31m重置通道失败: 0x%08X\033[0m\n", ret);
   }
   return ret;
 }

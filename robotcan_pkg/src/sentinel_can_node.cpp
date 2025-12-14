@@ -128,7 +128,8 @@ private:
     data[7] = wz & 0xFF;
 
     canbus_.can_send(channel_, chassis_cmd_id_, data, 1000);
-    RCLCPP_DEBUG(this->get_logger(), "Sent chassis cmd id=0x%X vx=%.3f vy=%.3f wz=%.3f", chassis_cmd_id_, msg->linear.x, msg->linear.y, msg->angular.z);
+    printf("Sent chassis cmd id=0x%X vx=%d vy=%d wz=%d\n", chassis_cmd_id_, vx, vy, wz);
+    RCLCPP_INFO(this->get_logger(), "Sent chassis cmd id=0x%X vx=%.3f vy=%.3f wz=%.3f", chassis_cmd_id_, msg->linear.x, msg->linear.y, msg->angular.z);
   }
 
   // 哨兵模式切换：直接把 uint8 放到 data[0]
