@@ -30,6 +30,12 @@ endif()
 install(DIRECTORY launch maps params behavior_tree rviz
   DESTINATION share/${PROJECT_NAME})
 
+# Install Python scripts
+install(PROGRAMS
+  scripts/gimbal_adaptive_filter.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 
 # 4 include 
 
