@@ -42,10 +42,11 @@ ament_target_dependencies(twist_transformer ${ros_dependencies})
 add_executable(twist2chassis_cmd src/twist2chassis_cmd.cpp)
 ament_target_dependencies(twist2chassis_cmd ${ros_dependencies})
 
-# install(
-#   DIRECTORY launch
-#   DESTINATION share/${PROJECT_NAME}
-# )
+# Install launch and config directories
+install(
+  DIRECTORY launch config
+  DESTINATION share/${PROJECT_NAME}
+)
 
 # Install nodes
 install(

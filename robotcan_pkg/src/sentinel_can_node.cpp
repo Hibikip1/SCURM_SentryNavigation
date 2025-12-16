@@ -25,9 +25,11 @@ public:
   : Node("sentinel_can_node")
   {
     // params (可通过 launch/param 覆盖)
+    // 注意：导航发布的/cmd_vel已经在chassis_link坐标系下
+    // 不需要twist_transformer的yaw转换，直接使用/cmd_vel
+//    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
     this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel_in_yaw");
 //    this->declare_parameter<std::string>("cmd_vel_topic", "/chassis_cmd");
-//    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
     this->declare_parameter<int>("chassis_cmd_id", 0x520);
     this->declare_parameter<int>("mode_switch_id", 0x203);
     this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x301, 0x302, 0x303});
@@ -105,17 +107,23 @@ private:
   // 将 Twist 编码为 8 字节 CAN 帧（示例协议）：
   // Byte0: control type (1 = VELOCITY)
   // Byte1: reserved
-  // Byte2-3: vx (int16) = linear.x * scale
-  // Byte4-5: vy (int16) = linear.y * scale
+  // Byte2-3: vx (int16) = linear.x * scale (ROS X轴 = 前方)
+  // Byte4-5: vy (int16) = linear.y * scale (ROS Y轴 = 左方)
   // Byte6-7: wz (int16) = angular.z * scale
+  // 
+  // 注意：如果电控期望的坐标系不同，需要转换：
+  // - 若电控X=右，Y=前 → 需交换并取反：vy_can=-vx_ros, vx_can=vy_ros
   // scale 取 1000（即 mm/s 或 m/s*1000）
   void on_cmd_vel(const geometry_msgs::msg::Twist::SharedPtr msg)
   {
     if (!can_opened_) return;
     const float scale = 1000.0f;
-    int16_t vx = static_cast<int16_t>(std::round(msg->linear.x * scale));
-    int16_t vy = static_cast<int16_t>(std::round(msg->linear.y * scale));
-    int16_t wz = static_cast<int16_t>(std::round(msg->angular.z * scale));
+    
+    // ROS标准坐标系: X=前, Y=左, Z=上
+    // 如果电控坐标系不同，在这里转换
+    int16_t vx = static_cast<int16_t>(std::round(msg->linear.x * scale*2));
+    int16_t vy = static_cast<int16_t>(std::round(msg->linear.y * scale*2));
+    int16_t wz = static_cast<int16_t>(std::round(msg->angular.z * scale*2));
 
     uint8_t data[8] = {0};
     data[0] = 1; // VELOCITY
@@ -128,7 +136,6 @@ private:
     data[7] = wz & 0xFF;
 
     canbus_.can_send(channel_, chassis_cmd_id_, data, 1000);
-    printf("Sent chassis cmd id=0x%X vx=%d vy=%d wz=%d\n", chassis_cmd_id_, vx, vy, wz);
     RCLCPP_INFO(this->get_logger(), "Sent chassis cmd id=0x%X vx=%.3f vy=%.3f wz=%.3f", chassis_cmd_id_, msg->linear.x, msg->linear.y, msg->angular.z);
   }
 
