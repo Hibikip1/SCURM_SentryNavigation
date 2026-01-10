@@ -28,8 +28,8 @@ public:
     // 注意：导航发布的/cmd_vel已经在chassis_link坐标系下
     // 不需要twist_transformer的yaw转换，直接使用/cmd_vel
 //    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
-    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel_in_yaw");
-//    this->declare_parameter<std::string>("cmd_vel_topic", "/chassis_cmd");
+//  this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel_in_yaw");
+    this->declare_parameter<std::string>("cmd_vel_topic", "/chassis_cmd");
     this->declare_parameter<int>("chassis_cmd_id", 0x520);
     this->declare_parameter<int>("mode_switch_id", 0x203);
     this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x301, 0x302, 0x303});
