@@ -116,6 +116,21 @@ BM_StatusTypeDef BMCANTool::can_send(BM_ChannelHandle bm_channel, int device_id,
 		BM_CanMessageTypeDef msg;
     memset(&msg, 0, sizeof(msg));
   
+    // 定期清理缓冲区（每 10 秒）- 防止TX/RX队列堵塞
+    static uint32_t start_time_ms = 0;
+    if (start_time_ms == 0) {
+      start_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+    uint32_t current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count();
+    
+    if (current_time_ms - last_clear_time_ms > 10000) { // 10秒
+      printf("\033[33m[DEBUG][CANTX]\033[0m \033[33m定期清理总线缓冲区(防止堵塞)...\033[0m\n");
+      BM_ClearBuffer(bm_channel);
+      last_clear_time_ms = current_time_ms;
+    }
+  
     msg.id.SID = device_id;
     msg.ctrl.tx.DLC = 0x08;
     msg.ctrl.tx.FDF = 0;  // CAN2.0 模式（非 FD）
@@ -141,18 +156,29 @@ BM_StatusTypeDef BMCANTool::can_send(BM_ChannelHandle bm_channel, int device_id,
 			printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送超时\033[0m\n");
       tx_error_count++;
       
-      // 连续超时 5 次后清空缓冲区
-      if (tx_error_count >= 5) {
-        //printf("\033[33m[DEBUG][CANTX]\033[0m \033[33m连续超时，清空缓冲区...\033[0m\n");
-        BM_ClearBuffer(bm_channel);
+      // 连续超时 10 次后重置通道
+      if (tx_error_count >= 10) {
+        printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m连续发送超时%d次，重置通道...\033[0m\n", tx_error_count);
+        this->reset_channel(bm_channel);
         tx_error_count = 0;
+      } else if (tx_error_count >= 5) {
+        // 超时5次先清空缓冲区
+        printf("\033[33m[DEBUG][CANTX]\033[0m \033[33m连续超时%d次，清空缓冲区...\033[0m\n", tx_error_count);
+        BM_ClearBuffer(bm_channel);
       }
-       printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送失败 通道:%d, 设备id:0x%03X, 错误:0x%08X.\033[0m\n", bm_channel, device_id, error);
+       printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送失败 通道:%d, 设备id:0x%03X, 错误:0x%08X (计数:%d/10).\033[0m\n", bm_channel, device_id, error, tx_error_count);
 		}
 		else if (BM_ERROR_OK != error)
 		{
-			 printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送失败 错误:0x%08X.\033[0m\n", error);
+			 printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m发送失败 错误:0x%08X (计数:%d/10).\033[0m\n", error, tx_error_count);
       tx_error_count++;
+      
+      // 其他错误也计入，达到10次重置
+      if (tx_error_count >= 10) {
+        printf("\033[31m[DEBUG][CANTX]\033[0m \033[31m连续发送失败%d次，重置通道...\033[0m\n", tx_error_count);
+        this->reset_channel(bm_channel);
+        tx_error_count = 0;
+      }
 		}
     else {
       // 发送成功，重置计数
@@ -192,7 +218,7 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
   uint32_t current_time_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
     std::chrono::steady_clock::now().time_since_epoch()).count();
   
-  if (current_time_ms - last_clear_time_ms > 30000) { // 30秒
+  if (current_time_ms - last_clear_time_ms > 10000) { // 10秒
     printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m定期清理缓冲区...\033[0m\n");
     BM_ClearBuffer(bm_channel);
     last_clear_time_ms = current_time_ms;
@@ -214,7 +240,7 @@ BM_StatusTypeDef BMCANTool::can_receive(BM_ChannelHandle bm_channel, int device_
   }
   
   // 如果不匹配帧过多，清空缓冲区
-  if (unmatched_count > 5) {
+  if (unmatched_count > 3) {
     printf("\033[33m[DEBUG][CANRX]\033[0m \033[33m不匹配帧过多(%d)，清空缓冲区...\033[0m\n", unmatched_count);
     BM_ClearBuffer(bm_channel);
   }
@@ -247,9 +273,24 @@ BM_StatusTypeDef BMCANTool::clear_buffer(BM_ChannelHandle bm_channel) {
 }
 
 BM_StatusTypeDef BMCANTool::reset_channel(BM_ChannelHandle bm_channel) {
+  printf("\033[33m[DEBUG][CAN]\033[0m \033[33m正在重置通道...\033[0m\n");
+  
+  // 先清空缓冲区
+  BM_ClearBuffer(bm_channel);
+  
+  // 重置通道
   BM_StatusTypeDef ret = BM_Reset(bm_channel);
   if (ret == BM_ERROR_OK) {
     printf("\033[32m[DEBUG][CAN]\033[0m \033[32m通道已重置\033[0m\n");
+    
+    // 重新激活通道
+    ret = BM_Activate(bm_channel);
+    if (ret == BM_ERROR_OK) {
+      printf("\033[32m[DEBUG][CAN]\033[0m \033[32m通道已重新激活\033[0m\n");
+    } else {
+      printf("\033[31m[DEBUG][CAN]\033[0m \033[31m重新激活通道失败: 0x%08X\033[0m\n", ret);
+    }
+    
     // 重置后清空统计
     tx_error_count = 0;
     rx_timeout_count = 0;
