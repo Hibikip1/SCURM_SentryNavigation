@@ -17,7 +17,10 @@ def generate_launch_description():
             name='rot_imu_node',
             output='screen',
             parameters=[{
-                'use_tf_transform': False  # 现在平放，不需要变换
+                'use_tf_transform': True,  # mid360倾斜45度，需要变换
+                'roll_offset': 0.0,
+                'pitch_offset': 0.7853981633974483,  # 45度 = π/4
+                'yaw_offset': 0.0
             }]
         ),
         

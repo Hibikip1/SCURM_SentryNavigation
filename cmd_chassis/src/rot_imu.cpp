@@ -1,5 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/imu.hpp>
+#include <geometry_msgs/msg/twist.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 
@@ -9,7 +10,7 @@ public:
     IMURotateNode() : Node("imu_rotate_node", rclcpp::NodeOptions().use_intra_process_comms(true))
     {
         // 参数：是否启用TF变换（预留mid360倾斜放置时使用）
-        this->declare_parameter<bool>("use_tf_transform", false);
+        this->declare_parameter<bool>("use_tf_transform", true);
         this->declare_parameter<double>("roll_offset", 0.0);
         this->declare_parameter<double>("pitch_offset", 0.0);
         this->declare_parameter<double>("yaw_offset", 0.0);
@@ -33,7 +34,12 @@ public:
         subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
             "livox/imu", 10, std::bind(&IMURotateNode::listener_callback, this, std::placeholders::_1));
         
-        
+        //雷达倾斜放置后，速度方向需要变换
+
+        cmd_vel_subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
+            "/cmd_vel", 20, std::bind(&IMURotateNode::cmd_vel_callback, this, std::placeholders::_1));
+
+        cmd_vel_tilted_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel_tilted", 10);
     }
 
 private:
@@ -84,9 +90,40 @@ private:
         publisher_->publish(std::move(output_msg));
     }
 
+    void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
+    {
+        if (!use_tf_transform_) {
+            // 平放时直接转发原始cmd_vel
+            cmd_vel_tilted_publisher_->publish(*msg);
+            return;
+        }
+        
+        // cmd_vel是map坐标系（水平）下的速度，需要逆变换到倾斜的雷达坐标系
+        // 使用逆四元数进行变换（相当于从水平系到倾斜系）
+        tf2::Quaternion inverse_quat = transform_quat_.inverse();
+        tf2::Vector3 linear_vel(msg->linear.x, msg->linear.y, msg->linear.z);
+        linear_vel = tf2::quatRotate(inverse_quat, linear_vel);
+         
+        auto tilted_msg = std::make_shared<geometry_msgs::msg::Twist>();
+        tilted_msg->linear.x = linear_vel.x();
+        tilted_msg->linear.y = linear_vel.y();
+        tilted_msg->linear.z = linear_vel.z();
+        tilted_msg->angular = msg->angular; // 角速度保持不变（绕z轴）
+        
+        cmd_vel_tilted_publisher_->publish(*tilted_msg);
+        
+        RCLCPP_DEBUG(this->get_logger(), 
+            "Vel transform: in:(%.3f,%.3f,%.3f) -> tilted:(%.3f,%.3f,%.3f)", 
+            msg->linear.x, msg->linear.y, msg->linear.z,
+            tilted_msg->linear.x, tilted_msg->linear.y, tilted_msg->linear.z);
+    }
+
+
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscription_;
-    
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscription_;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_tilted_publisher_;
+
     bool use_tf_transform_;
     double roll_offset_;
     double pitch_offset_;

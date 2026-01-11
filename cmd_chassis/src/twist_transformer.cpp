@@ -16,9 +16,9 @@ public:
         odom_subscription_ = this->create_subscription<nav_msgs::msg::Odometry>(
             "/imu/odometry", 10, std::bind(&TwistTransformer::odom_callback, this, std::placeholders::_1));
         
-        // 订阅cmd_vel进行转换
+        // 订阅cmd_vel_tilted进行转换
         cmd_vel_subscription_ = this->create_subscription<geometry_msgs::msg::Twist>(
-            "/cmd_vel", 20, std::bind(&TwistTransformer::cmd_vel_callback, this, std::placeholders::_1));
+            "/cmd_vel_tilted", 20, std::bind(&TwistTransformer::cmd_vel_callback, this, std::placeholders::_1));
         
         RCLCPP_INFO(this->get_logger(), "TwistTransformer started - using EKF odometry yaw for velocity transformation");
     }
