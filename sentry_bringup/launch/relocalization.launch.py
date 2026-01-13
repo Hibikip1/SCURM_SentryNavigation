@@ -84,7 +84,12 @@ def generate_launch_description():
           {'map_path':'/home/lab/sentry_ws/src/sentry_bringup/maps/GlobalMap.pcd'},
           {'fitness_score_thre':0.9}, # 是最近点距离的平均值，越小越严格
           {'converged_count_thre':40}, # pcl pub at 20 hz, 2s
-          {'pcl_type':'livox'},
+          {'pcl_type':'livox'},  # 订阅原始雷达数据
+          # 外参矫正 - 45度倾斜安装
+          {'extrinsic_T': [-0.011, -0.02329, 0.04412]},
+          {'extrinsic_R': [1.0, 0.0, 0.0,
+                           0.0, -0.7071067811865476, -0.7071067811865476,
+                           0.0, 0.7071067811865476, -0.7071067811865476]},
       ],
   )
   

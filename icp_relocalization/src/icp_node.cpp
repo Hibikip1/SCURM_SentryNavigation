@@ -37,6 +37,8 @@ public:
         this->declare_parameter("cloud_voxel_leaf_size", 0.1);
         this->declare_parameter("converged_count_thre", 20);
         this->declare_parameter("pcl_type","livox");
+        this->declare_parameter("extrinsic_T", std::vector<double>());
+        this->declare_parameter("extrinsic_R", std::vector<double>());
 
         this->get_parameter("initial_x", initial_x);
         this->get_parameter("initial_y", initial_y);
@@ -52,6 +54,30 @@ public:
         this->get_parameter("cloud_voxel_leaf_size", cloud_voxel_leaf_size);
         this->get_parameter("converged_count_thre", converged_count_thre);
         this->get_parameter("pcl_type", pcl_type);
+        
+        std::vector<double> extrinsic_T_vec, extrinsic_R_vec;
+        this->get_parameter("extrinsic_T", extrinsic_T_vec);
+        this->get_parameter("extrinsic_R", extrinsic_R_vec);
+        
+        // 设置外参矩阵
+        lidar_to_imu_transform_ = Eigen::Matrix4f::Identity();
+        if (extrinsic_R_vec.size() == 9 && extrinsic_T_vec.size() == 3) {
+            lidar_to_imu_transform_(0, 0) = extrinsic_R_vec[0];
+            lidar_to_imu_transform_(0, 1) = extrinsic_R_vec[1];
+            lidar_to_imu_transform_(0, 2) = extrinsic_R_vec[2];
+            lidar_to_imu_transform_(1, 0) = extrinsic_R_vec[3];
+            lidar_to_imu_transform_(1, 1) = extrinsic_R_vec[4];
+            lidar_to_imu_transform_(1, 2) = extrinsic_R_vec[5];
+            lidar_to_imu_transform_(2, 0) = extrinsic_R_vec[6];
+            lidar_to_imu_transform_(2, 1) = extrinsic_R_vec[7];
+            lidar_to_imu_transform_(2, 2) = extrinsic_R_vec[8];
+            lidar_to_imu_transform_(0, 3) = extrinsic_T_vec[0];
+            lidar_to_imu_transform_(1, 3) = extrinsic_T_vec[1];
+            lidar_to_imu_transform_(2, 3) = extrinsic_T_vec[2];
+            RCLCPP_INFO(this->get_logger(), "Loaded extrinsic parameters");
+        } else {
+            RCLCPP_WARN(this->get_logger(), "Extrinsic parameters not set, using identity transform");
+        }
 
         publisher_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("icp_result", 10);
 #ifdef USE_LIVOX
@@ -126,11 +152,8 @@ private:
         sor_scan.filter(*input_cloud);
         RCLCPP_INFO(this->get_logger(), "Downsampled input cloud to %d data points", input_cloud->width * input_cloud->height);
 
-        // Rotate pcl alone x axis for 180 degree
-        Eigen::Matrix4f rotation = Eigen::Matrix4f::Identity();
-        rotation(1, 1) = -1;
-        rotation(2, 2) = -1;
-        pcl::transformPointCloud(*input_cloud, *input_cloud, rotation);
+        // Apply lidar to IMU extrinsic transform
+        pcl::transformPointCloud(*input_cloud, *input_cloud, lidar_to_imu_transform_);
 
         // Perform ICP alignment
         pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
@@ -224,11 +247,8 @@ private:
         sor_scan.filter(*input_cloud);
         RCLCPP_INFO(this->get_logger(), "Downsampled input cloud to %d data points", input_cloud->width * input_cloud->height);
 
-        // Rotate pcl alone x axis for 180 degree
-        Eigen::Matrix4f rotation = Eigen::Matrix4f::Identity();
-        rotation(1, 1) = -1;
-        rotation(2, 2) = -1;
-        pcl::transformPointCloud(*input_cloud, *input_cloud, rotation);
+        // Apply lidar to IMU extrinsic transform
+        pcl::transformPointCloud(*input_cloud, *input_cloud, lidar_to_imu_transform_);
 
         // Perform ICP alignment
         pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
@@ -352,6 +372,7 @@ private:
     int converged_count = 0;
     int converged_count_thre;
     std::string pcl_type;
+    Eigen::Matrix4f lidar_to_imu_transform_;  // 雷达到IMU的外参变换矩阵
 };
 
 int main(int argc, char *argv[])
