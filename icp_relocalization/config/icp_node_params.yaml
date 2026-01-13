@@ -1,0 +1,56 @@
+# ICP重定位节点优化配置示例
+# 针对Mid360激光雷达内置IMU漂移问题的改进
+
+icp_node:
+  ros__parameters:
+    # 初始位置参数
+    initial_x: 0.0
+    initial_y: 0.0
+    initial_z: 0.0
+    initial_a: 0.0
+    
+    # ICP求解参数
+    solver_max_iter: 75
+    max_correspondence_distance: 0.1
+    RANSAC_outlier_rejection_threshold: 1.0
+    
+    # 地图参数
+    map_path: "/path/to/your/map.pcd"
+    map_frame_id: "map"
+    map_voxel_leaf_size: 0.1
+    
+    # 点云下采样参数
+    cloud_voxel_leaf_size: 0.1
+    
+    # 收敛判定参数
+    fitness_score_thre: 0.0
+    converged_count_thre: 20
+    
+    # 传感器类型
+    pcl_type: "livox"
+    
+    # 外参标定参数 (3x3旋转矩阵 + 3D平移向量)
+
+    extrinsic_R: [ 1.0, 0.0, 0.0,
+                    0.0, -0.7071067811865476, -0.7071067811865476,
+                    0.0, 0.7071067811865476, -0.7071067811865476 ]
+
+    extrinsic_T: [0.0, 0.0, 0.0]
+    
+    # ===== 新增优化参数 =====
+    
+    # 退化运动检测
+    enable_degenerate_detection: true
+    degenerate_motion_threshold: 0.05  # 单位：米，纯旋转判定的平移阈值
+    
+    # 关键帧机制
+    enable_keyframe_mechanism: true
+    keyframe_min_translation: 0.1      # 单位：米，相邻关键帧最小平移距离
+    keyframe_min_rotation: 0.05        # 单位：弧度（约3度），相邻关键帧最小旋转角度
+    
+    # 时间同步
+    enable_time_sync: true
+    enable_imu_subscription: true      # 是否订阅IMU话题用于时间同步和漂移监测
+    
+    # 地图权重因子（在退化场景下增加）
+    map_weight_factor: 1.0

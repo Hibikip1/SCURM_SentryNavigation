@@ -9,26 +9,13 @@ class IMURotateNode : public rclcpp::Node
 public:
     IMURotateNode() : Node("imu_rotate_node", rclcpp::NodeOptions().use_intra_process_comms(true))
     {
-        // 参数：是否启用TF变换（预留mid360倾斜放置时使用）
-        this->declare_parameter<bool>("use_tf_transform", true);
-        this->declare_parameter<double>("roll_offset", 0.0);
-        this->declare_parameter<double>("pitch_offset", 0.0);
-        this->declare_parameter<double>("yaw_offset", 0.0);
-        
-        use_tf_transform_ = this->get_parameter("use_tf_transform").as_bool();
-        roll_offset_ = this->get_parameter("roll_offset").as_double();
-        pitch_offset_ = this->get_parameter("pitch_offset").as_double();
-        yaw_offset_ = this->get_parameter("yaw_offset").as_double();
-        
-        // 计算旋转四元数（预留框架，现在平放不需要）
-        if (use_tf_transform_) {
-            transform_quat_.setRPY(roll_offset_, pitch_offset_, yaw_offset_);
-            RCLCPP_INFO(this->get_logger(), 
-                "IMU transform enabled: roll=%.3f, pitch=%.3f, yaw=%.3f", 
-                roll_offset_, pitch_offset_, yaw_offset_);
-        } else {
-            RCLCPP_INFO(this->get_logger(), "IMU transform disabled (mid360 mounted flat)");
-        }
+        // 固定旋转参数，绕roll轴旋转-π/4（-45度）
+        use_tf_transform_ = true;
+        roll_offset_ = -0.7853981633974483; // -π/4
+        pitch_offset_ = 0.0;
+        yaw_offset_ = 0.0;
+        transform_quat_.setRPY(roll_offset_, pitch_offset_, yaw_offset_);
+        RCLCPP_INFO(this->get_logger(), "IMU transform固定: roll=%.6f, pitch=%.3f, yaw=%.3f", roll_offset_, pitch_offset_, yaw_offset_);
         
         publisher_ = this->create_publisher<sensor_msgs::msg::Imu>("imu/data", 10);
         subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
