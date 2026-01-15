@@ -29,7 +29,7 @@ public:
     // 不需要twist_transformer的yaw转换，直接使用/cmd_vel
 //    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
 //  this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel_in_yaw");
-    this->declare_parameter<std::string>("cmd_vel_topic", "/chassis_cmd");
+    this->declare_parameter<std::string>("cmd_vel_topic", "/cmd_vel");
     this->declare_parameter<int>("chassis_cmd_id", 0x520);
     this->declare_parameter<int>("mode_switch_id", 0x203);
     this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x301, 0x302, 0x303});
@@ -139,7 +139,7 @@ private:
     RCLCPP_INFO(this->get_logger(), "Sent chassis cmd id=0x%X vx=%.3f vy=%.3f wz=%.3f", chassis_cmd_id_, msg->linear.x, msg->linear.y, msg->angular.z);
   }
 
-  // 哨兵模式切换：直接把 uint8 放到 data[0]
+  // 哨兵模式切换：直接把 uint8 放到 data[0]91tv.com
   void on_mode_cmd(const std_msgs::msg::UInt8::SharedPtr msg)
   {
     if (!can_opened_) return;

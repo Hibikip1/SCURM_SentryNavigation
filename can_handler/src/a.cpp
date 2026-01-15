@@ -144,7 +144,7 @@ private:
 
     // 设置通道 0 的波特率
     // CAN 1Mbps, , 采样点 0.75
-    //device_channel_set_baud_with_sp(dev_, 0, false, 1000000, 1000000, 0.75f, 0.75f);
+    device_channel_set_baud_with_sp(dev_, 0, true, 3000000, 3000000, 0.75f, 0.75f);
 
     char buf[255];
     device_get_version(dev_, buf, sizeof(buf));
@@ -243,7 +243,7 @@ private:
         chassis_cmd_id_,     // CAN ID
         1,                   // 发送次数
         false,               // 是否扩展帧
-        false,               // 是否 CAN FD
+        true,               // 是否 CAN FD
         false,               // 是否启用 BRS（波特率切换）
         8,                   // 数据长度
         data                 // 数据内容
@@ -267,7 +267,7 @@ private:
         mode_switch_id_,     // CAN ID
         1,                   // 发送次数
         false,               // 是否扩展帧
-        false,               // 是否 CAN FD
+        true,               // 是否 CAN FD
         false,               // 是否启用 BRS（波特率切换）
         8,                   // 数据长度
         data                 // 数据内容

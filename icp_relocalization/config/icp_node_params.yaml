@@ -54,3 +54,47 @@ icp_node:
     
     # 地图权重因子（在退化场景下增加）
     map_weight_factor: 1.0
+
+    # ----- 与急转急停相关的权重与平滑参数 -----
+    # 基础权重（默认场景）
+    live_cloud_weight_base: 1.0      # 实时点云基础权重
+    map_weight_base: 1.0             # 地图点云基础权重
+
+    # 权重上下限（防止过度偏向单一源）
+    live_cloud_weight_min: 0.3
+    live_cloud_weight_max: 2.0
+    map_weight_min: 0.3
+    map_weight_max: 4.0
+
+    # 动态权重切换（根据运动状态自动调整权重）
+    dynamic_weight_enabled: true
+    weight_transition_time: 0.5      # 单位：秒，权重平滑切换时长
+    weight_adjust_on_sharp_motion: true
+
+    # 判断“急转急停”的阈值（当角速度或加速度超过阈值时认为为尖锐运动）
+    sharp_angular_velocity_threshold: 1.2   # 单位：rad/s
+    sharp_linear_acceleration_threshold: 2.0  # 单位：m/s^2
+
+    # 插帧 / 里程插值（用于在帧率落后时平滑位姿）
+    interpolation_enabled: true
+    interpolation_method: "linear"   # 支持: linear | spline
+    interpolation_max_gap_time: 0.2    # 单位：秒，超过该间隙不插帧
+    interpolation_max_velocity: 1.5    # 单位：m/s，超速时禁用插帧以避免错误位移
+    interpolation_max_angular_velocity: 1.5 # rad/s
+
+    # 发布位姿的平滑/低通参数
+    pose_smoothing_enabled: true
+    pose_smoothing_window: 5          # 使用多少个历史pose做滑动平均
+    pose_lowpass_tau: 0.2             # 时间常数（秒），用于一阶低通滤波
+
+    # 急转时的额外保护（在退化或尖锐运动中更偏向地图）
+    sharp_motion_map_boost: 2.0       # 在尖锐运动时地图权重乘因子
+
+    # ICP在尖锐运动下的保护参数（会与退化检测协同）
+    icp_sharp_max_correspondence_distance: 0.05
+    icp_sharp_max_iterations: 30
+    icp_sharp_ransac_threshold: 0.5
+
+    # 历史位姿缓存长度（用于插帧/平滑/回退）
+    pose_history_length: 50
+

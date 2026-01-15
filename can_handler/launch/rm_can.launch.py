@@ -9,7 +9,7 @@ def generate_launch_description():
             name='rm_can',
             output='screen',
             parameters=[{
-                'cmd_vel_topic': '/chassis_cmd',
+                'cmd_vel_topic': '/cmd_vel',
                 'chassis_cmd_id': 0x520,
                 'mode_switch_id': 0x203,
                 'referee_ids': [0x301, 0x302, 0x303]
