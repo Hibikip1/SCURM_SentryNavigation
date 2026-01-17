@@ -9,13 +9,44 @@ class IMURotateNode : public rclcpp::Node
 public:
     IMURotateNode() : Node("imu_rotate_node", rclcpp::NodeOptions().use_intra_process_comms(true))
     {
-        // 固定旋转参数，绕roll轴旋转-π/4（-45度）
+        // MID360 实际安装：roll=-48°, pitch=1°
+        // 建图需要变换到水平向下：roll=132° (即 -48° + 180°)
+        // 所以这里应用 roll=132°, pitch=1° 的变换
         use_tf_transform_ = true;
-        roll_offset_ = -0.7853981633974483; // -π/4
-        pitch_offset_ = 0.0;
+        roll_offset_ = 2.303835;  // 132° = 2.303835 rad
+        pitch_offset_ = 0.017453; // 1° = 0.017453 rad
         yaw_offset_ = 0.0;
         transform_quat_.setRPY(roll_offset_, pitch_offset_, yaw_offset_);
-        RCLCPP_INFO(this->get_logger(), "IMU transform固定: roll=%.6f, pitch=%.3f, yaw=%.3f", roll_offset_, pitch_offset_, yaw_offset_);
+        
+        // 声明并获取 IMU bias 补偿参数
+        this->declare_parameter("enable_bias_compensation", false);
+        this->declare_parameter("gyro_bias_x", 0.0);
+        this->declare_parameter("gyro_bias_y", 0.0);
+        this->declare_parameter("gyro_bias_z", 0.0);
+        this->declare_parameter("acc_bias_x", 0.0);
+        this->declare_parameter("acc_bias_y", 0.0);
+        this->declare_parameter("acc_bias_z", 0.0);
+        
+        enable_bias_compensation_ = this->get_parameter("enable_bias_compensation").as_bool();
+        gyro_bias_x_ = this->get_parameter("gyro_bias_x").as_double();
+        gyro_bias_y_ = this->get_parameter("gyro_bias_y").as_double();
+        gyro_bias_z_ = this->get_parameter("gyro_bias_z").as_double();
+        acc_bias_x_ = this->get_parameter("acc_bias_x").as_double();
+        acc_bias_y_ = this->get_parameter("acc_bias_y").as_double();
+        acc_bias_z_ = this->get_parameter("acc_bias_z").as_double();
+        
+        RCLCPP_INFO(this->get_logger(), "IMU transform固定: roll=%.6f, pitch=%.3f, yaw=%.3f", 
+                    roll_offset_, pitch_offset_, yaw_offset_);
+        
+        if (enable_bias_compensation_) {
+            RCLCPP_INFO(this->get_logger(), "IMU bias 补偿已启用:");
+            RCLCPP_INFO(this->get_logger(), "  陀螺仪 bias: [%.6f, %.6f, %.6f] rad/s", 
+                        gyro_bias_x_, gyro_bias_y_, gyro_bias_z_);
+            RCLCPP_INFO(this->get_logger(), "  加速度 bias: [%.6f, %.6f, %.6f] m/s²", 
+                        acc_bias_x_, acc_bias_y_, acc_bias_z_);
+        } else {
+            RCLCPP_INFO(this->get_logger(), "IMU bias 补偿未启用");
+        }
         
         publisher_ = this->create_publisher<sensor_msgs::msg::Imu>("imu/data", 10);
         subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
@@ -55,6 +86,16 @@ private:
             output_msg->linear_acceleration.z = linear_accel.z();
             
             RCLCPP_DEBUG(this->get_logger(), "Applied IMU transform");
+        }
+        
+        // 应用 bias 补偿（在坐标变换之后）
+        if (enable_bias_compensation_) {
+            output_msg->angular_velocity.x -= gyro_bias_x_;
+            output_msg->angular_velocity.y -= gyro_bias_y_;
+            output_msg->angular_velocity.z -= gyro_bias_z_;
+            output_msg->linear_acceleration.x -= acc_bias_x_;
+            output_msg->linear_acceleration.y -= acc_bias_y_;
+            output_msg->linear_acceleration.z -= acc_bias_z_;
         }
         // else: 平放时直接转发原始数据
         
@@ -106,6 +147,15 @@ private:
     }
 
 
+    
+    // IMU bias 补偿参数
+    bool enable_bias_compensation_;
+    double gyro_bias_x_;
+    double gyro_bias_y_;
+    double gyro_bias_z_;
+    double acc_bias_x_;
+    double acc_bias_y_;
+    double acc_bias_z_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr publisher_;
     rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subscription_;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscription_;

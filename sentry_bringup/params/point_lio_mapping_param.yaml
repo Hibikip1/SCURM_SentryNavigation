@@ -1,0 +1,78 @@
+/**:
+    ros__parameters:
+        # Point-LIO 特有参数
+        use_imu_as_input: False
+        prop_at_freq_of_imu: True
+        check_satu: True
+        init_map_size: 10
+        point_filter_num: 3                             # 减少到3提高稳定性
+        space_down_sample: True
+        filter_size_surf: 0.5                           # 增大滤波器尺寸减少噪声
+        filter_size_map: 0.5
+        ivox_nearby_type: 6
+        runtime_pos_log_enable: False
+
+        # 先验地图配置（建图模式关闭）
+        prior_pcd:
+            enable: False
+            prior_pcd_map_path: ""
+            init_pose: [ 0.0, 0.0, 0.0 ]
+
+        common:
+            lid_topic: "/livox/lidar"
+            imu_topic: "/imu/data"
+            con_frame: False
+            con_frame_num: 1
+            cut_frame: False
+            cut_frame_time_interval: 0.1
+            time_diff_lidar_to_imu: 0.0
+
+        preprocess:
+            lidar_type: 1                                   # 1 for Livox
+            scan_line: 4
+            scan_rate: 10
+            timestamp_unit: 3                               # 3-nanosecond
+            blind: 0.5
+
+        mapping:
+            imu_en: True
+            extrinsic_est_en: False                         # 建图时也可以设为True进行外参估计
+            imu_time_inte: 0.005
+            lidar_time_inte: 0.1
+            satu_acc: 3.0
+            satu_gyro: 35.0
+            acc_norm: 1.0
+            lidar_meas_cov: 0.001                       # 降低激光测量协方差，提高点云约束权重
+            acc_cov_input: 0.2766                       # 增大IMU加速度协方差，降低IMU预测权重
+            vel_cov: 25.0                               # 增大速度协方差
+            gyr_cov_input: 0.0143                       # 增大陀螺仪协方差
+            acc_cov_output: 500.0
+            gyr_cov_output: 1000.0
+            b_acc_cov: 0.00001                          # 减小bias协方差，bias变化更慢
+            b_gyr_cov: 0.0001
+            imu_meas_acc_cov: 0.2766                      # 增大IMU测量协方差
+            imu_meas_omg_cov: 0.0143
+            plane_thr: 0.05                             # 减小平面阈值，要求更平的平面
+            match_s: 81.0
+            ivox_grid_resolution: 1.5                   # 减小网格分辨率，提高地图精度
+            fov_degree: 360.0
+            det_range: 100.0
+            gravity: [ 0.0, 0.0, -9.810 ]
+            gravity_init: [ 0.0, 0.0, -9.810 ]
+            extrinsic_T: [ -0.011, -0.02329, 0.04412 ]
+            extrinsic_R: [ 0.9998476951563913, 0.0129696655359956, -0.0116779393018008,
+                          0.0000000000000000, -0.6691306063588582, -0.7431448254773942,
+                          -0.0174524064372835, 0.7430316409209713, -0.6690286945265029 ]
+
+        odometry:
+            publish_odometry_without_downsample: False
+
+        publish:
+            path_en: False
+            scan_publish_en: True
+            scan_bodyframe_pub_en: False
+            tf_send_en: True
+
+        pcd_save:
+            pcd_save_en: False
+            interval: -1

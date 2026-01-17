@@ -1,0 +1,8 @@
+imu_bias_calibration:
+  acc_bias_x: -0.39842488717695657
+  acc_bias_y: 0.6386369245069755
+  acc_bias_z: -19.50832130926522
+  calibration_time: builtin_interfaces.msg.Time(sec=1768638926, nanosec=985505879)
+  gyro_bias_x: 0.005794641420616269
+  gyro_bias_y: -0.004777890307399011
+  gyro_bias_z: -0.0015107491765266974

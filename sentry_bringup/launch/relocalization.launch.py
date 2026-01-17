@@ -1,4 +1,5 @@
 import os
+import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -10,7 +11,13 @@ from launch.substitutions import LaunchConfiguration
 def generate_launch_description():
 
   config_path = os.path.join(
-      get_package_share_directory('sentry_bringup'), 'params') 
+      get_package_share_directory('sentry_bringup'), 'params')
+  
+  # 读取SLAM算法选择配置
+  slam_selector_path = os.path.join(config_path, 'slam_selector.yaml')
+  with open(slam_selector_path, 'r') as f:
+    slam_config = yaml.safe_load(f)
+    slam_algorithm = slam_config.get('slam_algorithm', 'fast_lio') 
   
   twist2chassis_cmd_node=Node(
     package='cmd_chassis',
@@ -93,18 +100,33 @@ def generate_launch_description():
       ],
   )
   
-  # fast-lio localization   
-  fast_lio_param = os.path.join(
-      config_path, 'fast_lio_relocalization_param.yaml')
-  fast_lio_node = Node(
-      package='fast_lio',
-      executable='fastlio_mapping',
-      parameters=[
-          fast_lio_param
-      ],
-      output='screen',
-      remappings=[('/Odometry','/state_estimation')]
-  )
+  # SLAM节点配置 - 根据slam_selector.yaml动态选择
+  if slam_algorithm == 'point_lio':
+    slam_param = os.path.join(config_path, 'point_lio_relocalization_param.yaml')
+    slam_node = Node(
+        package='point_lio',
+        executable='pointlio_mapping',
+        parameters=[slam_param],
+        output='screen',
+        remappings=[('/aft_mapped_to_init','/state_estimation')]
+    )
+    # Point-LIO使用camera_init作为世界坐标系，需要添加map->camera_init的静态TF
+    map_to_camera_init_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='map_to_camera_init',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'camera_init']
+    )
+  else:  # fast_lio
+    slam_param = os.path.join(config_path, 'fast_lio_relocalization_param.yaml')
+    slam_node = Node(
+        package='fast_lio',
+        executable='fastlio_mapping',
+        parameters=[slam_param],
+        output='screen',
+        remappings=[('/Odometry','/state_estimation')]
+    )
+    map_to_camera_init_tf = None  # FAST-LIO不需要此TF
         
   rviz_config_file = os.path.join(
     get_package_share_directory('sentry_bringup'), 'rviz', 'loam_livox.rviz')
@@ -119,7 +141,7 @@ def generate_launch_description():
     period=5.0,
     actions=[
       icp_node,
-      fast_lio_node
+      slam_node
     ]
   )
 
@@ -129,11 +151,14 @@ def generate_launch_description():
   ld.add_action(fake_joint_node)
   ld.add_action(twist_transformer_node)
   ld.add_action(rot_imu)
+  ld.add_action(sentry_description)
   ld.add_action(mid360_node)
-  ld.add_action(sentry_description) # 没接自瞄的时候这个要开
   ld.add_action(map_odom_trans)
-  # ld.add_action(icp_node)
   ld.add_action(start_rviz)
   ld.add_action(delayed_start_lio)
+  
+  # 仅当使用Point-LIO时添加map->camera_init的TF
+  if map_to_camera_init_tf is not None:
+    ld.add_action(map_to_camera_init_tf)
 
   return ld
