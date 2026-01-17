@@ -1,7 +1,7 @@
 # SLAM Algorithm Selector Configuration
 # 选择使用的SLAM算法: 'fast_lio' 或 'point_lio'
 # Point-LIO对退化运动更鲁棒，适合mid360
-slam_algorithm: 'point_lio'  # Options: 'fast_lio', 'point_lio'
+slam_algorithm: 'fast_lio'  # Options: 'fast_lio', 'point_lio'
 
 # 根据选择的算法，系统会自动加载对应的参数文件：
 # fast_lio:

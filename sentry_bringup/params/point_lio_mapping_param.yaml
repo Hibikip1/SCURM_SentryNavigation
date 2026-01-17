@@ -43,15 +43,15 @@
             satu_gyro: 35.0
             acc_norm: 1.0
             lidar_meas_cov: 0.001                       # 降低激光测量协方差，提高点云约束权重
-            acc_cov_input: 0.2766                       # 增大IMU加速度协方差，降低IMU预测权重
+            acc_cov_input: 0.3282                       # 增大IMU加速度协方差，降低IMU预测权重
             vel_cov: 25.0                               # 增大速度协方差
-            gyr_cov_input: 0.0143                       # 增大陀螺仪协方差
+            gyr_cov_input: 0.0146                       # 增大陀螺仪协方差
             acc_cov_output: 500.0
             gyr_cov_output: 1000.0
             b_acc_cov: 0.00001                          # 减小bias协方差，bias变化更慢
             b_gyr_cov: 0.0001
-            imu_meas_acc_cov: 0.2766                      # 增大IMU测量协方差
-            imu_meas_omg_cov: 0.0143
+            imu_meas_acc_cov: 0.3282                      # 增大IMU测量协方差
+            imu_meas_omg_cov: 0.0146
             plane_thr: 0.05                             # 减小平面阈值，要求更平的平面
             match_s: 81.0
             ivox_grid_resolution: 1.5                   # 减小网格分辨率，提高地图精度
