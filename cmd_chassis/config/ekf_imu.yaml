@@ -16,8 +16,8 @@ ekf_imu_fusion:
     # 发布加速度
     publish_acceleration: false
     
-    # IMU0 配置 - 订阅 /livox/imu
-    imu0: /livox/imu
+    # IMU0 配置 - 订阅 /imu/data（已由 rot_imu / 驱动拉平成水平的 IMU 数据）
+    imu0: /imu/data
     imu0_config: [false, false, false,  # x, y, z position (不使用)
                   false, false, false,  # roll, pitch, yaw (不使用，因为Livox不提供有效orientation)
                   false, false, false,  # x_vel, y_vel, z_vel (不使用)
