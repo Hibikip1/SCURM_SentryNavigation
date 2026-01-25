@@ -13,6 +13,18 @@ def generate_launch_description():
   config_path = os.path.join(
       get_package_share_directory('sentry_bringup'), 'params')
   
+  # 读取系统模式配置（real / sim）
+  system_mode_path = os.path.join(config_path, 'system_mode.yaml')
+  system_mode = 'real'
+  use_sim_time = False
+  if os.path.exists(system_mode_path):
+    with open(system_mode_path, 'r') as f:
+      mode_cfg = yaml.safe_load(f) or {}
+      system_mode = mode_cfg.get('mode', 'real')
+      use_sim_time = (system_mode == 'sim')
+  
+  print(f"[mapping.launch.py] 模式: {system_mode}, use_sim_time: {use_sim_time}")
+  
   # 读取SLAM算法选择配置
   slam_selector_path = os.path.join(config_path, 'slam_selector.yaml')
   with open(slam_selector_path, 'r') as f:
@@ -22,18 +34,21 @@ def generate_launch_description():
   twist2chassis_cmd_node=Node(
     package='cmd_chassis',
     executable='twist2chassis_cmd',
+    parameters=[{'use_sim_time': use_sim_time}],
     output='screen'
   )
   
   fake_joint_node=Node(
     package='cmd_chassis',
     executable='fake_joint',
+    parameters=[{'use_sim_time': use_sim_time}],
     output='screen'
   )
   
   twist_transformer_node=Node(
     package='cmd_chassis',
     executable='twist_transformer',
+    parameters=[{'use_sim_time': use_sim_time}],
     output='screen'
   )
 
@@ -59,10 +74,14 @@ def generate_launch_description():
     imu_bias_params = {'enable_bias_compensation': False}
     print(f"[mapping.launch.py] 未找到 IMU bias 校准文件，bias 补偿已禁用")
 
+  # 合并 IMU bias 参数和 use_sim_time
+  rot_imu_params = imu_bias_params.copy()
+  rot_imu_params['use_sim_time'] = use_sim_time
+  
   rot_imu=Node(
     package='cmd_chassis',
     executable='rot_imu',
-    parameters=[imu_bias_params],
+    parameters=[rot_imu_params],
     output='screen'
   )
 
@@ -71,11 +90,13 @@ def generate_launch_description():
         get_package_share_directory('sentry_description'), 'launch', 'view_model.launch.py')])
   )
 
-  # mid360
-  mid360_node = IncludeLaunchDescription(
-      PythonLaunchDescriptionSource([os.path.join(
-          get_package_share_directory('livox_ros_driver2'), 'launch_ROS2', 'msg_MID360_launch.py')])
-  )
+  # mid360 真实雷达驱动：仅在 real 模式下启动
+  mid360_node = None
+  if system_mode == 'real':
+    mid360_node = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([os.path.join(
+            get_package_share_directory('livox_ros_driver2'), 'launch_ROS2', 'msg_MID360_launch.py')])
+    )
   
   # SLAM节点配置 - 根据slam_selector.yaml动态选择
   if slam_algorithm == 'point_lio':
@@ -83,7 +104,7 @@ def generate_launch_description():
     slam_node = Node(
         package='point_lio',
         executable='pointlio_mapping',
-        parameters=[slam_param],
+        parameters=[slam_param, {'use_sim_time': use_sim_time}],
         output='screen',
         remappings=[('/aft_mapped_to_init','/state_estimation')]
     )
@@ -98,7 +119,7 @@ def generate_launch_description():
     slam_node = Node(
         package='fast_lio',
         executable='fastlio_mapping',
-        parameters=[slam_param],
+        parameters=[slam_param, {'use_sim_time': use_sim_time}],
         output='screen',
         remappings=[('/Odometry','/state_estimation')]
     )
@@ -114,6 +135,7 @@ def generate_launch_description():
     package='rviz2',
     executable='rviz2',
     arguments=['-d', rviz_config_file,'--ros-args', '--log-level', 'warn'],
+    parameters=[{'use_sim_time': use_sim_time}],
     output='screen'
   )
 
@@ -129,7 +151,8 @@ def generate_launch_description():
   ld.add_action(twist_transformer_node)
   ld.add_action(rot_imu)
   ld.add_action(sentry_description)
-  ld.add_action(mid360_node)
+  if mid360_node is not None:
+    ld.add_action(mid360_node)
   ld.add_action(start_rviz)
   ld.add_action(delayed_start_mapping)
 

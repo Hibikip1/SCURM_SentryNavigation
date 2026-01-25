@@ -1,0 +1,11 @@
+mode: real         # sim 或 real
+use_sim_time: true
+
+# 建图 / 导航统一使用的话题
+lid_topic: "/livox/lidar"
+imu_topic: "/imu/data"
+
+# 仿真机器人命名空间（目前 rmu_gazebo_simulator 使用 red_standard_robot1）
+sim_robot_ns: "/red_standard_robot1"
+sim_lid_topic: "/red_standard_robot1/livox/lidar"
+sim_imu_topic: "/red_standard_robot1/livox/imu"

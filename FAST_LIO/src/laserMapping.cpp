@@ -656,10 +656,17 @@ private:
         scan_count++;
         double cur_time = get_time_sec(msg->header.stamp);
         double preprocess_start_time = omp_get_wtime();
-        if (!is_first_lidar && cur_time < last_timestamp_lidar)
+
+        // 在仿真环境下，/clock 可能存在轻微抖动，
+        // 这里仅在时间明显倒退时才认为是“loop back”并清空缓存。
+        if (!is_first_lidar)
         {
-            RCLCPP_ERROR(this->get_logger(), "lidar loop back, clear buffer");
-            lidar_buffer.clear();
+            double time_diff = cur_time - last_timestamp_lidar;
+            if (time_diff < -0.1)
+            {
+                RCLCPP_ERROR(this->get_logger(), "lidar loop back (diff: %f), clear buffer", time_diff);
+                lidar_buffer.clear();
+            }
         }
         if (is_first_lidar)
         {
@@ -688,10 +695,15 @@ private:
         double cur_time = get_time_sec(msg->header.stamp);
         double preprocess_start_time = omp_get_wtime();
         scan_count++;
-        if (!is_first_lidar && cur_time < last_timestamp_lidar)
+
+        if (!is_first_lidar)
         {
-            std::cerr << "lidar loop back, clear buffer" << std::endl;
-            lidar_buffer.clear();
+            double time_diff = cur_time - last_timestamp_lidar;
+            if (time_diff < -0.1)
+            {
+                std::cerr << "lidar loop back, clear buffer (diff: " << time_diff << ")" << std::endl;
+                lidar_buffer.clear();
+            }
         }
         if (is_first_lidar)
         {
@@ -741,9 +753,14 @@ private:
 
         mtx_buffer.lock();
 
-        if (timestamp < last_timestamp_imu)
+        // 仿真下 /clock 可能出现数百毫秒乃至近 1 秒的回退，
+        // 这些抖动对算法影响不大，但频繁清空缓冲区会直接让建图瘫痪。
+        // 这里只在时间回退超过 5 秒时才认为数据完全不可信，清空缓冲区；
+        // 其他小回退仅记录日志，不再清空。
+        double imu_dt = timestamp - last_timestamp_imu;
+        if (imu_dt < -5.0)
         {
-            std::cerr << "lidar loop back, clear buffer" << std::endl;
+            std::cerr << "imu time loop back >5s, clear buffer (diff: " << imu_dt << ")" << std::endl;
             imu_buffer.clear();
         }
 

@@ -1,6 +1,13 @@
 <?xml version='1.0' encoding='utf-8'?>
 <sdf version='1.7'>
   <world name='default'>
+    <!-- Physics configuration for stable real-time simulation -->
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+
     <!-- Physics -->
     <plugin filename="libignition-gazebo-physics-system.so" name="ignition::gazebo::systems::Physics">
     </plugin>
