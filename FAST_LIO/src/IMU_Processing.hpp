@@ -190,7 +190,7 @@ void ImuProcess::IMU_init(const MeasureGroup &meas, esekfom::esekf<state_ikfom, 
     N++;
   }
   state_ikfom init_state = kf_state.get_x();
-  init_state.grav = S2(-mean_acc / mean_acc.norm() * G_m_s2);
+  init_state.grav = S2(-mean_acc / mean_acc.norm() * G_m_s2);//fastlio重力
 
   // state_inout.rot = Eye3d; // Exp(mean_acc.cross(V3D(0, 0, -1 / scale_gravity)));
   init_state.bg = mean_gyr;
