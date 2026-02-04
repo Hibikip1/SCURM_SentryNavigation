@@ -50,7 +50,7 @@ public:
         
         publisher_ = this->create_publisher<sensor_msgs::msg::Imu>("imu/data", 10);
         subscription_ = this->create_subscription<sensor_msgs::msg::Imu>(
-            "livox/imu", 10, std::bind(&IMURotateNode::listener_callback, this, std::placeholders::_1));
+            "/livox/imu_192_168_1_172", 10, std::bind(&IMURotateNode::listener_callback, this, std::placeholders::_1));
         
     }
 

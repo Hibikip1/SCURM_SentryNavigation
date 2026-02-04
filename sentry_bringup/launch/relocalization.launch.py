@@ -49,10 +49,16 @@ def generate_launch_description():
         get_package_share_directory('sentry_description'), 'launch', 'view_model.launch.py')])
   )
 
-  # mid360
+  # mid360 (PointCloud2) + merge_cloud: provide /merged_cloud for ICP + FAST_LIO
   mid360_node = IncludeLaunchDescription(
-      PythonLaunchDescriptionSource([os.path.join(
-          get_package_share_directory('livox_ros_driver2'), 'launch_ROS2', 'msg_MID360_launch.py')])
+    PythonLaunchDescriptionSource([os.path.join(
+      get_package_share_directory('sentry_bringup'), 'launch', 'livox_mid360_pointcloud2.launch.py')])
+  )
+
+  merge_cloud_node = Node(
+    package='merge_cloud',
+    executable='merge_cloud_node',
+    output='screen'
   )
 
   # icp relocalization
@@ -91,13 +97,14 @@ def generate_launch_description():
           {'map_path':'/home/lab/sentry_ws/src/sentry_bringup/maps/GlobalMap.pcd'},
           {'fitness_score_thre':0.9}, # 是最近点距离的平均值，越小越严格
           {'converged_count_thre':40}, # pcl pub at 20 hz, 2s
-          {'pcl_type':'livox'},  # 订阅原始雷达数据
+            {'pcl_type':'pointcloud2'},  # 订阅 PointCloud2 (由 merge_cloud 输出)
           # 外参矫正 - 45度倾斜安装
           {'extrinsic_T': [-0.011, -0.02329, 0.04412]},
           {'extrinsic_R': [1.0, 0.0, 0.0,
                            0.0, 1.0, 0.0,
                            0.0, 0.0, 1.0]},
       ],
+          remappings=[('/pointcloud2', '/merged_cloud')],
   )
   
   # SLAM节点配置 - 根据slam_selector.yaml动态选择
@@ -129,7 +136,7 @@ def generate_launch_description():
     map_to_camera_init_tf = None  # FAST-LIO不需要此TF
         
   rviz_config_file = os.path.join(
-    get_package_share_directory('sentry_bringup'), 'rviz', 'loam_livox.rviz')
+    get_package_share_directory('sentry_bringup'), 'rviz', 'relocalization_live_cloud.rviz')
   start_rviz = Node(
     package='rviz2',
     executable='rviz2',
@@ -153,6 +160,7 @@ def generate_launch_description():
   ld.add_action(rot_imu)
   ld.add_action(sentry_description)
   ld.add_action(mid360_node)
+  ld.add_action(merge_cloud_node)
   ld.add_action(map_odom_trans)
   ld.add_action(start_rviz)
   ld.add_action(delayed_start_lio)

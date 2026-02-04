@@ -93,10 +93,19 @@ def generate_launch_description():
   # mid360 真实雷达驱动：仅在 real 模式下启动
   mid360_node = None
   if system_mode == 'real':
+    # Use PointCloud2 output so merge_cloud can subscribe and produce /merged_cloud.
     mid360_node = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('livox_ros_driver2'), 'launch_ROS2', 'msg_MID360_launch.py')])
+            get_package_share_directory('sentry_bringup'), 'launch', 'livox_mid360_pointcloud2.launch.py')])
     )
+
+  # 双雷达点云融合节点（提供 /merged_cloud 给 FAST_LIO）
+  merge_cloud_node = Node(
+    package='merge_cloud',
+    executable='merge_cloud_node',
+    parameters=[{'use_sim_time': use_sim_time}],
+    output='screen'
+  )
   
   # SLAM节点配置 - 根据slam_selector.yaml动态选择
   if slam_algorithm == 'point_lio':
@@ -153,6 +162,7 @@ def generate_launch_description():
   ld.add_action(sentry_description)
   if mid360_node is not None:
     ld.add_action(mid360_node)
+  ld.add_action(merge_cloud_node)
   ld.add_action(start_rviz)
   ld.add_action(delayed_start_mapping)
 

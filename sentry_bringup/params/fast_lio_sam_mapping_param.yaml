@@ -5,7 +5,7 @@
             sensor_frame_id: "imu_link"
             base_frame_id: "base_link"
             send_odom_base_tf: true
-            lid_topic:  "/livox/lidar"
+            lid_topic:  "merged_cloud"
             imu_topic:  "/imu/data"
             gnss_topic:  /gps/fix         #"/imu/data"
             time_sync_en: false         # ONLY turn on when external time synchronization is really not possible
