@@ -20,7 +20,7 @@
 
         common:
             lid_topic: "/livox/lidar"
-            imu_topic: "/imu/data"
+            imu_topic: "imu/data"
             con_frame: False
             con_frame_num: 1
             cut_frame: False
@@ -60,9 +60,9 @@
             gravity: [ 0.0, 0.0, -9.810 ]
             gravity_init: [ 0.0, 0.0, -9.810 ]
             extrinsic_T: [ -0.011, -0.02329, 0.04412 ]
-            extrinsic_R: [ 0.9998476951563913, 0.0129696655359956, -0.0116779393018008,
-                          0.0000000000000000, -0.6691306063588582, -0.7431448254773942,
-                          -0.0174524064372835, 0.7430316409209713, -0.6690286945265029 ]
+            extrinsic_R: [ 1., 0., 0.,
+                            0., 1., 0.,
+                            0., 0., 1.]
 
         odometry:
             publish_odometry_without_downsample: False

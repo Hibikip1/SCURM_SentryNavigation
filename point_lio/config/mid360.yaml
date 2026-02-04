@@ -13,7 +13,7 @@
 
         common:
             lid_topic: "livox/lidar"
-            imu_topic: "imu/data"
+            imu_topic: "livox/imu"
             con_frame: False                                # True: if you need to combine several LiDAR frames into one
             con_frame_num: 1                                # the number of frames combined
             cut_frame: False                                # True: if you need to cut one LiDAR frame into several subframes
@@ -54,9 +54,9 @@
             gravity: [ 0.0, 0.0, -9.810 ]                   # [0.0, 9.810, 0.0] # gravity to be aligned
             gravity_init: [ 0.0, 0.0, -9.810 ]              # [0.0, 9.810, 0.0] # # preknown gravity in the first IMU body frame, use when imu_en is False or start from a non-stationary state
             extrinsic_T: [ -0.011, -0.02329, 0.04412 ]
-            extrinsic_R: [ 0.9998476951563913, -0.01297244663297738, 0.01167644684282871,
-                            0.0, -0.6691306063588582, -0.7431448254773942,
-                             0.01745240643728351, 0.743000432798103, -0.6690083827513697 ]
+            extrinsic_R: [ 1., 0., 0.,
+                            0., 1., 0.,
+                            0., 0., 1.]
 
         odometry:
             publish_odometry_without_downsample: False
