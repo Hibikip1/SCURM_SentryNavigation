@@ -103,7 +103,12 @@ def generate_launch_description():
   merge_cloud_node = Node(
     package='merge_cloud',
     executable='merge_cloud_node',
-    parameters=[{'use_sim_time': use_sim_time}],
+    parameters=[
+      {'use_sim_time': use_sim_time},
+      # RViz/部分节点默认以 RELIABLE 订阅点云；这里显式用 RELIABLE 避免 QoS 不兼容导致“看不见点云”。
+      {'output_reliable_qos': True},
+      {'output_topic': '/merged_cloud'},
+    ],
     output='screen'
   )
   

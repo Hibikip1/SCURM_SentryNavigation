@@ -30,6 +30,7 @@ public:
   SentinelCanNode()
   : Node("rm_can"), can_opened_(false), handle_(nullptr), dev_(nullptr)
   {
+
     // params (可通过 launch/param 覆盖)
     // 注意：导航发布的/cmd_vel已经在chassis_link坐标系下
     // 不需要twist_transformer的yaw转换，直接使用/cmd_vel
@@ -64,7 +65,7 @@ public:
     game_state_pub_ = this->create_publisher<rm_interfaces::msg::GameState>("game_state", 10);
 
    
-    timer_ = this->create_wall_timer(50ms, std::bind(&SentinelCanNode::timer_poll_can, this));
+
 
     RCLCPP_INFO(this->get_logger(), "chassis_cmd_id=0x%X, mode_switch_id=0x%X", chassis_cmd_id_, mode_switch_id_);
     std::string ids = "referee_ids: ";
@@ -76,6 +77,7 @@ public:
 
   ~SentinelCanNode() override
   {
+
     if (can_opened_ && dev_) {
       device_close_channel(dev_, 0);
       device_close(dev_);
@@ -179,13 +181,39 @@ private:
     // printf("Sent callback, packet id: 0x%x\n", frame->head.can_id);
   }
 
-  static void rec_callback_static(usb_rx_frame_t* frame)
+  void rec_callback_static(usb_rx_frame_t* frame)
   {
-    // 接收回调 - 这里可以处理接收到的数据
-    // printf("Rec callback, packet id: 0x%x\n", frame->head.can_id);
+    if (!frame) return;
+     const uint32_t can_id = frame->head.can_id;
+        
+        // 检查是否是裁判系统数据
+        for (auto id : referee_ids_) {
+            if (can_id == static_cast<uint32_t>(id)) {
+                if (can_id == referee_ids_[0]) {  // GameState ID
+                    uint8_t game_progress_can = frame->payload[0];
+                    uint16_t current_hp_can = static_cast<uint16_t>(
+                        frame->payload[1] | (frame->payload[2] << 8)
+                    );
+                    
+                    auto msg = rm_interfaces::msg::GameState();
+                    msg.game_progress = game_progress_can;
+                    msg.current_hp = current_hp_can;
+                    
+                    // 直接发布，不需要锁，因为ROS2发布是线程安全的
+                    game_state_pub_->publish(msg);
+                    
+                    RCLCPP_DEBUG(this->get_logger(), 
+                        "Received game state: progress=%d, hp=%d", 
+                        game_progress_can, current_hp_can);
+                }
+                // 可以添加其他ID的处理
+                break;
+            }
+        }
   }
 
   // 参数
+
   std::string cmd_vel_topic_;
   int chassis_cmd_id_;
   int mode_switch_id_;
@@ -205,16 +233,7 @@ private:
   // 裁判系统数据缓存
   rm_interfaces::msg::GameState state_msg_;
   
-  // 将 Twist 编码为 8 字节 CAN 帧（示例协议）：
-  // Byte0: control type (1 = VELOCITY)
-  // Byte1: reserved
-  // Byte2-3: vx (int16) = linear.x * scale (ROS X轴 = 前方)
-  // Byte4-5: vy (int16) = linear.y * scale (ROS Y轴 = 左方)
-  // Byte6-7: wz (int16) = angular.z * scale
-  // 
-  // 注意：如果电控期望的坐标系不同，需要转换：
-  // - 若电控X=右，Y=前 → 需交换并取反：vy_can=-vx_ros, vx_can=vy_ros
-  // scale 取 1000（即 mm/s 或 m/s*1000）
+
   void on_cmd_vel(const geometry_msgs::msg::Twist::SharedPtr msg)
   {
     if (!can_opened_ || !dev_) return;
@@ -276,20 +295,7 @@ private:
     RCLCPP_INFO(this->get_logger(), "Sent mode switch %u to id=0x%X", msg->data, mode_switch_id_);
   }
 
-  // 轮询接收 CAN（按配置的 referee_ids_），解析成 GameState 并发布
-  void timer_poll_can()
-  {
-    if (!can_opened_ || !dev_) return;
 
-    // 注意：这个示例使用轮询方式
-    // 实际上回调函数 rec_callback_static 也会被调用
-    // 你可以选择在回调中处理或在这里轮询
-    // 这里仅作为示例，实际应用中建议在回调中处理
-    
-    // 由于 SDK 的回调已经在后台线程中处理接收
-    // 这里主要用于周期性发布状态或其他任务
-    // 如果需要在定时器中主动读取，需要查看 SDK 是否提供轮询接口
-  }
 };
 
 int main(int argc, char ** argv)

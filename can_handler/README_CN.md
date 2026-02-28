@@ -1,5 +1,5 @@
 # RM CAN Handler - USB转CAN通信节点
-
+ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.5}, angular: {z: 0.2}}" -r 50
 ## 功能说明
 
 这个 ROS2 节点实现了通过 USB-CAN 设备与电控系统的通信功能。

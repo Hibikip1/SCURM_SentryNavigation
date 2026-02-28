@@ -6,6 +6,7 @@
 #include <pcl/common/transforms.h>
 #include <pcl/io/pcd_io.h>
 #include <message_filters/subscriber.h>
+#include <pcl/filters/voxel_grid.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 #include <Eigen/Dense> // 用于构建变换矩阵
@@ -15,9 +16,19 @@ class MergeCloudNode : public rclcpp::Node
 public:
   MergeCloudNode() : Node("merge_cloud_node")
   {
+    cloud1_topic_ = this->declare_parameter<std::string>("cloud1_topic", "/livox/lidar_192_168_1_172");
+    cloud2_topic_ = this->declare_parameter<std::string>("cloud2_topic", "/livox/lidar_192_168_1_115");
+    output_topic_ = this->declare_parameter<std::string>("output_topic", "/merged_cloud");
+    output_frame_id_ = this->declare_parameter<std::string>("output_frame_id", "");
+    voxel_leaf_size_ = this->declare_parameter<double>("voxel_leaf_size", 0.0);
+    output_qos_depth_ = this->declare_parameter<int>("output_qos_depth", 10);
+    // 默认用 RELIABLE，确保 RViz/部分算法节点(默认Reliable订阅)能直接看到点云。
+    // 若追求更低延迟/更少回传，可在启动时设置为 false (BEST_EFFORT)。
+    output_reliable_qos_ = this->declare_parameter<bool>("output_reliable_qos", true);
+
     // 订阅两个 Livox 点云话题
-    cloud1_sub_.subscribe(this, "/livox/lidar_192_168_1_172");
-    cloud2_sub_.subscribe(this, "/livox/lidar_192_168_1_115");
+    cloud1_sub_.subscribe(this, cloud1_topic_);
+    cloud2_sub_.subscribe(this, cloud2_topic_);
 
     // 使用 ApproximateTime 同步器
     sync_ = std::make_shared<message_filters::Synchronizer<SyncPolicy>>(
@@ -25,8 +36,14 @@ public:
     sync_->registerCallback(
       std::bind(&MergeCloudNode::syncCallback, this, std::placeholders::_1, std::placeholders::_2));
 
-    // 发布合并后的点云
-    merged_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("merged_cloud", 10);
+    rclcpp::QoS out_qos(rclcpp::KeepLast(std::max(1, output_qos_depth_)));
+    out_qos.durability_volatile();
+    if (output_reliable_qos_) {
+      out_qos.reliable();
+    } else {
+      out_qos.best_effort();
+    }
+    merged_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(output_topic_, out_qos);
   }
 
 private:
@@ -60,19 +77,40 @@ private:
     // 合并点云
     pcl::PointCloud<pcl::PointXYZI>::Ptr merged_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     *merged_cloud = *cloud1_transformed + *cloud2_transformed;
+
+    if (voxel_leaf_size_ > 0.0) {
+      pcl::VoxelGrid<pcl::PointXYZI> voxel;
+      voxel.setLeafSize(
+        static_cast<float>(voxel_leaf_size_),
+        static_cast<float>(voxel_leaf_size_),
+        static_cast<float>(voxel_leaf_size_));
+      voxel.setInputCloud(merged_cloud);
+      pcl::PointCloud<pcl::PointXYZI>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZI>);
+      voxel.filter(*filtered);
+      merged_cloud = filtered;
+    }
     
     // 将 PCL 点云转换为 ROS 2 消息
     sensor_msgs::msg::PointCloud2 merged_msg;
     pcl::toROSMsg(*merged_cloud, merged_msg);
+
+    if (!output_frame_id_.empty()) {
+      merged_msg.header.frame_id = output_frame_id_;
+    } else {
+      merged_msg.header.frame_id = cloud1_msg->header.frame_id;
+    }
+
     // 重要：保留来自雷达的时间戳，FAST_LIO 依赖该时间与 IMU 对齐
-    merged_msg.header.frame_id = "sensor";
     const rclcpp::Time t1(cloud1_msg->header.stamp);
     const rclcpp::Time t2(cloud2_msg->header.stamp);
     merged_msg.header.stamp = (t1 >= t2) ? cloud1_msg->header.stamp : cloud2_msg->header.stamp;
 
-    // 发布合并后的点云
     merged_cloud_pub_->publish(merged_msg);
-    RCLCPP_INFO(this->get_logger(), "Published merged cloud with %zu points.", merged_cloud->size());
+    RCLCPP_INFO_THROTTLE(
+      this->get_logger(), *this->get_clock(), 2000,
+      "Published merged cloud: %zu pts (leaf=%.3f)",
+      merged_cloud->size(), voxel_leaf_size_);
+    //RCLCPP_INFO(this->get_logger(), "Published merged cloud with %zu points.", merged_cloud->size());
   }
 
   // 设置变换矩阵（欧拉角 + 平移）
@@ -114,6 +152,14 @@ private:
   float roll1_ = 0.0f, pitch1_ = 0.0f, yaw1_ = 0.0f; // cloud1 的欧拉角（弧度）
   float tx1_ = 0.0f, ty1_ = 0.0f, tz1_ = 0.0f;       // cloud1 的平移（米）
 
+
+  std::string cloud1_topic_;
+  std::string cloud2_topic_;
+  std::string output_topic_;
+  std::string output_frame_id_;
+  double voxel_leaf_size_ = 0.0;
+  int output_qos_depth_ = 10;
+  bool output_reliable_qos_ = false;
   float roll2_ = 0.0f, pitch2_ = 0.0f, yaw2_ = 0.0f; // cloud2 的欧拉角（弧度）
   float tx2_ = 0.0f, ty2_ = 0.0f, tz2_ = 0.0f;       // cloud2 的平移（米）
 };
