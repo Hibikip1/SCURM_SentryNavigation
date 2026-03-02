@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="RMUL_Simple">
+    <ReactiveSequence>
+      <Topics2Blackboard game_progress="{game_progress}"
+                         current_hp="{current_hp}"/>
+      
+      <ReactiveFallback _while="game_progress==4">
+        
+        <!-- 🔴 复活逻辑：HP=0 时的处理 -->
+        <Sequence _while="current_hp==0">
+          <!-- 1. 延时 8 秒（等待复活） -->
+          <Delay delay_msec="8000">
+            <AlwaysSuccess/>
+          </Delay>
+          
+          <!-- 2. 切换到云台跟随模式 (FOLLOW_GIMBAL = 2) -->
+          <ChassisTypePublisher chassis_cmd="2"/>
+          
+          <!-- 3. 延时 2 秒 -->
+          <Delay delay_msec="2000">
+            <AlwaysSuccess/>
+          </Delay>
+          
+          <!-- 4. 切换到小陀螺模式 (SPIN = 4) -->
+          <ChassisTypePublisher chassis_cmd="4"/>
+          
+          <!-- 5. 等待血量恢复（持续检查） -->
+          <RetryUntilSuccessful num_attempts="-1">
+            <ScriptCondition code="current_hp&gt;0"/>
+          </RetryUntilSuccessful>
+        </Sequence>
+        
+        <!-- 残血回血 -->
+        <Sequence _while="current_hp&lt;250&amp;&amp;current_hp&gt;0">  
+          <Nav2Pose goal="1.39,0.45,0.0,0.0,0.0,0.0,1.0"/>
+        </Sequence>
+        
+        <!-- 默认巡逻 -->
+        <Sequence>
+          <Nav2Pose goal="-2.05,0.316,0.0,0.0,0.0,0.0,1.0"/>
+        </Sequence>
+        
+      </ReactiveFallback>
+    </ReactiveSequence>
+  </BehaviorTree>
+
+  <TreeNodesModel>
+    <Action ID="Nav2Pose">
+      <input_port name="goal" type="geometry_msgs::msg::PoseStamped">goal</input_port>
+    </Action>
+    <Action ID="Topics2Blackboard">
+      <output_port name="game_progress" type="uint8_t">game_progress</output_port>
+      <output_port name="current_hp" type="uint16_t">current_hp</output_port>
+    </Action>
+    <Action ID="ChassisTypePublisher">
+      <input_port name="chassis_cmd" type="int8_t">chassis_cmd</input_port>
+    </Action>
+    <Decorator ID="Delay">
+      <input_port name="delay_msec" type="unsigned">delay_msec</input_port>
+    </Decorator>
+    <Condition ID="ScriptCondition">
+      <input_port name="code" type="std::string">code</input_port>
+    </Condition>
+  </TreeNodesModel>
+</root>

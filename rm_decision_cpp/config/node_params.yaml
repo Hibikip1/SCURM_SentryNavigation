@@ -1,7 +1,7 @@
 tree_exec:
   ros__parameters:
     tree_node_model_export_path: /home/lab/sentry_ws/src/rm_decision_cpp/behavior_tree/tree_nodes.xml
-    tree_xml_file: /home/lab/sentry_ws/src/rm_decision_cpp/behavior_tree/24trees/RMUL.xml
+    tree_xml_file: /home/lab/sentry_ws/src/rm_decision_cpp/behavior_tree/24trees/SIM_RMUL.xml
     groot_port: 5556
     attack_distance: 2.0
     vehicle_dim: 1.58
