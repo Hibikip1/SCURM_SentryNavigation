@@ -1,5 +1,7 @@
 # RM CAN Handler - USB转CAN通信节点
+ros2 topic pub -r 10 /chassis_cmd rm_interfaces/msg/ChassisCmd "{type: 4, twist: {linear: {x: 3.0, y: 3.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 3.0}}}"
 
+ros2 topic echo /game_state rm_interfaces/msg/GameState 
 ## 功能说明
 
 这个 ROS2 节点实现了通过 USB-CAN 设备与电控系统的通信功能。

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="RMUL_Patrol">
+    <ReactiveSequence>
+      <Topics2Blackboard game_progress="{game_progress}"
+                         current_hp="{current_hp}"/>
+      
+      <ReactiveFallback _while="game_progress==4">
+        
+        <!-- 🔴 复活逻辑 -->
+        <Sequence _while="current_hp==0">
+          <Delay delay_msec="8000">
+            <AlwaysSuccess/>
+          </Delay>
+          <ChassisTypePublisher chassis_cmd="2"/>
+          <Delay delay_msec="2000">
+            <AlwaysSuccess/>
+          </Delay>
+          <ChassisTypePublisher chassis_cmd="4"/>
+          <RetryUntilSuccessful num_attempts="-1">
+            <ScriptCondition code="current_hp&gt;0"/>
+          </RetryUntilSuccessful>
+        </Sequence>
+        
+        <!-- 🟡 残血巡逻：走完4个点后停留在回血区 -->
+        <SequenceWithMemory _while="current_hp&lt;250&amp;&amp;current_hp&gt;0">
+          <ChassisTypePublisher chassis_cmd="2"/>
+          
+          <Nav2Pose name="LowHP_A" goal="1.39,0.45,0.0,0.0,0.0,0.0,1.0"/>
+          <Delay delay_msec="500">
+            <AlwaysSuccess/>
+          </Delay>
+          
+          <Nav2Pose name="LowHP_B" goal="1.50,0.60,0.0,0.0,0.0,0.0,1.0"/>
+          <Delay delay_msec="500">
+            <AlwaysSuccess/>
+          </Delay>
+          
+          <Nav2Pose name="LowHP_C" goal="1.30,0.70,0.0,0.0,0.0,0.0,1.0"/>
+          <Delay delay_msec="500">
+            <AlwaysSuccess/>
+          </Delay>
+          
+          <Nav2Pose name="LowHP_D" goal="1.20,0.50,0.0,0.0,0.0,0.0,1.0"/>
+          
+          <!-- ✅ 停留在 D 点，直到血量恢复 -->
+          <RetryUntilSuccessful num_attempts="-1">
+            <ScriptCondition code="current_hp&gt;=250"/>
+          </RetryUntilSuccessful>
+        </SequenceWithMemory>
+        
+        <!-- 🟢 正常血量巡逻：无限循环 -->
+        <RetryUntilSuccessful num_attempts="-1">
+          <Sequence>
+            <ChassisTypePublisher chassis_cmd="2"/>
+            
+            <Nav2Pose name="Patrol_A" goal="-2.05,0.316,0.0,0.0,0.0,0.0,1.0"/>
+            <Delay delay_msec="500">
+              <AlwaysSuccess/>
+            </Delay>
+            
+            <Nav2Pose name="Patrol_B" goal="-1.50,0.80,0.0,0.0,0.0,0.0,1.0"/>
+            <Delay delay_msec="500">
+              <AlwaysSuccess/>
+            </Delay>
+            
+            <Nav2Pose name="Patrol_C" goal="-1.00,0.50,0.0,0.0,0.0,0.0,1.0"/>
+            <Delay delay_msec="500">
+              <AlwaysSuccess/>
+            </Delay>
+            
+            <Nav2Pose name="Patrol_D" goal="-1.80,0.20,0.0,0.0,0.0,0.0,1.0"/>
+            <Delay delay_msec="500">
+              <AlwaysSuccess/>
+            </Delay>
+            
+            <AlwaysFailure/>
+          </Sequence>
+        </RetryUntilSuccessful>
+        
+      </ReactiveFallback>
+    </ReactiveSequence>
+  </BehaviorTree>
+
+  <TreeNodesModel>
+    <Action ID="Nav2Pose">
+      <input_port name="goal" type="geometry_msgs::msg::PoseStamped"/>
+    </Action>
+    <Action ID="Topics2Blackboard">
+      <output_port name="game_progress" type="uint8_t"/>
+      <output_port name="current_hp" type="uint16_t"/>
+    </Action>
+    <Action ID="ChassisTypePublisher">
+      <input_port name="chassis_cmd" type="int8_t"/>
+    </Action>
+    <Decorator ID="Delay">
+      <input_port name="delay_msec" type="unsigned"/>
+    </Decorator>
+    <Condition ID="ScriptCondition">
+      <input_port name="code" type="std::string"/>
+    </Condition>
+  </TreeNodesModel>
+</root>

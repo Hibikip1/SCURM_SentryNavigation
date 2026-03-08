@@ -357,7 +357,7 @@ map_server:
     use_sim_time: False
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
-    yaml_filename: "/home/sentry_ws/src/sentry_bringup/maps/test_map.yaml"
+    yaml_filename: "/home/lab/sentry_ws/test_map.yaml"
 
 map_saver:
   ros__parameters:

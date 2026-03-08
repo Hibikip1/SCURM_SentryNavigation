@@ -17,13 +17,13 @@
                          current_hp="{current_hp}"/>
       <!-- 回血 -->
       <ReactiveFallback _while="game_progress==4">
-        <Nav2Pose goal="-0.004,-0.287,0.0,0.0,0.0,0.0,0.0"
+        <Nav2Pose goal="1.39,0.45,0.0,0.0,0.0,0.0,0.0"
                   _while="current_hp&lt;250"/>
         <Nav2Pose name="Nav2Buff"
-                  goal="2.03,-3.3,0.0,0.0,0.0,0.0,0.0"
+                  goal="-2.05,0.316,0.0,0.0,0.0,0.0,0.0"
                   _while="stage_remain_time&lt;=250&amp;&amp;stage_remain_time&gt;=230"/>
         <Nav2Pose name="Nav2Buff"
-                  goal="2.03,-3.3,0.0,0.0,0.0,0.0,0.0"
+                  goal="-2.05,0.316,0.0,0.0,0.0,0.0,0.0"
                   _while="stage_remain_time&lt;=140&amp;&amp;stage_remain_time&gt;=120"/>
         <ReactiveSequence name="ATTCK!"
                           _while="tracking==true">
@@ -36,9 +36,9 @@
         </ReactiveSequence>
         <RetryUntilSuccessful num_attempts="1000">
           <Sequence>
-            <Nav2Pose goal="2.03,-3.3,0.0,0.0,0.0,0.0,0.0"
+            <Nav2Pose goal="-2.05,0.316,0.0,0.0,0.0,0.0,0.0"
                       _skipIf="stage_remain_time&lt;230"/>
-            <Nav2Pose goal="2.03,-3.3,0.0,0.0,0.0,0.0,0.0"
+            <Nav2Pose goal="-2.05,0.316,0.0,0.0,0.0,0.0,0.0"
                       _skipIf="stage_remain_time&gt;=230"/>
             <AlwaysFailure/>
           </Sequence>

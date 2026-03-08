@@ -22,7 +22,7 @@
 
         prior_pcd:
             enable: True
-            prior_pcd_map_path: "/home/lab/sentry_ws/src/sentry_bringup/maps/GlobalMap.pcd"
+            prior_pcd_map_path: "/home/lab/sentry_ws/test.pcd"
             init_pose: [ 0.0, 0.0, 0.0 ]
 
         preprocess:

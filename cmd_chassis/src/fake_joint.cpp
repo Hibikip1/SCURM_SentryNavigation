@@ -28,26 +28,13 @@ private:
         transform->transform.translation.x = msg->pose.pose.position.x;
         transform->transform.translation.y = msg->pose.pose.position.y;
         transform->transform.translation.z = msg->pose.pose.position.z;
-        
-        // 从FAST_LIO的orientation中只提取yaw角度（忽略可能错误的roll/pitch）
-        // 这对导航和重定位很重要：底盘应该保持水平（roll=pitch=0）
-        tf2::Quaternion q(
-            msg->pose.pose.orientation.x,
-            msg->pose.pose.orientation.y,
-            msg->pose.pose.orientation.z,
-            msg->pose.pose.orientation.w);
-        tf2::Matrix3x3 m(q);
-        double roll, pitch, yaw;
-        m.getRPY(roll, pitch, yaw);
-        
-        // 重新构造只包含yaw的四元数（roll=0, pitch=0）
-        tf2::Quaternion q_yaw_only;
-        q_yaw_only.setRPY(0.0, 0.0, yaw);
-        
-        transform->transform.rotation.x = q_yaw_only.x();
-        transform->transform.rotation.y = q_yaw_only.y();
-        transform->transform.rotation.z = q_yaw_only.z();
-        transform->transform.rotation.w = q_yaw_only.w();
+
+        // 固定底盘姿态：忽略 FAST_LIO 的姿态，仅使用平移
+        // 即在 TF 中让 odom->chassis_link 永远保持无旋转
+        transform->transform.rotation.x = 0.0;
+        transform->transform.rotation.y = 0.0;
+        transform->transform.rotation.z = 0.0;
+        transform->transform.rotation.w = 1.0;
 
         // Publish the transform
         broadcaster_->sendTransform(*transform);
