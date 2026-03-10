@@ -48,6 +48,9 @@ namespace rm_decision
     return {
         OutputPort<std::uint16_t>("current_hp"),
         OutputPort<std::uint8_t>("game_progress"),
+        OutputPort<std::uint8_t>("alive_status"),
+        OutputPort<std::uint8_t>("revive_event"),
+        OutputPort<std::uint8_t>("death_event"),
         OutputPort<std::uint16_t>("stage_remain_time"),
         OutputPort<std::uint8_t>("armor_id"),
         OutputPort<std::uint8_t>("hurt_type"),
@@ -65,8 +68,27 @@ namespace rm_decision
   void Topics2Blackboard::game_state_callback_(const rm_interfaces::msg::GameState::SharedPtr msg)
   {
     game_state_ = *msg;
+
+    std::uint8_t revive_event = 0;
+    std::uint8_t death_event = 0;
+    if (last_alive_status_)
+    {
+      if (*last_alive_status_ == 0 && game_state_->alive_status == 1)
+      {
+        revive_event = 1;
+      }
+      else if (*last_alive_status_ == 1 && game_state_->alive_status == 0)
+      {
+        death_event = 1;
+      }
+    }
+    last_alive_status_ = game_state_->alive_status;
+
     setOutput<std::uint16_t>("current_hp", game_state_->current_hp);
     setOutput<std::uint8_t>("game_progress", game_state_->game_progress);
+    setOutput<std::uint8_t>("alive_status", game_state_->alive_status);
+    setOutput<std::uint8_t>("revive_event", revive_event);
+    setOutput<std::uint8_t>("death_event", death_event);
     setOutput<std::uint16_t>("stage_remain_time", game_state_->stage_remain_time);
     setOutput<std::uint8_t>("armor_id", game_state_->armor_id);
     setOutput<std::uint8_t>("hurt_type", game_state_->hurt_type);
@@ -129,6 +151,9 @@ namespace rm_decision
       RCLCPP_WARN(rclcpp::get_logger("Topics2Blackboard"), "game_state is null");
       setOutput<std::uint16_t>("current_hp", 0);
       setOutput<std::uint8_t>("game_progress", 0);
+      setOutput<std::uint8_t>("alive_status", 0);
+      setOutput<std::uint8_t>("revive_event", 0);
+      setOutput<std::uint8_t>("death_event", 0);
       setOutput<std::uint16_t>("stage_remain_time", 0);
       setOutput<std::uint8_t>("armor_id", 0);
       setOutput<std::uint8_t>("hurt_type", 0);

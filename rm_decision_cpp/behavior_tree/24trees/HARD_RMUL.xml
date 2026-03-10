@@ -3,27 +3,29 @@
   <BehaviorTree ID="RMUL_Patrol">
     <ReactiveSequence>
       <Topics2Blackboard game_progress="{game_progress}"
-                         current_hp="{current_hp}"/>
+                         current_hp="{current_hp}"
+                         alive_status="{alive_status}"
+                         revive_event="{revive_event}"/>
       
       <ReactiveFallback _while="game_progress==4">
         
-        <!-- 🔴 复活逻辑 -->
-        <Sequence _while="current_hp==0">
-          <Delay delay_msec="8000">
-            <AlwaysSuccess/>
-          </Delay>
+        <!-- 🔴 复活逻辑：由存活状态边沿(0->1)触发 -->
+        <Sequence _while="revive_event==1">
           <ChassisTypePublisher chassis_cmd="2"/>
           <Delay delay_msec="2000">
             <AlwaysSuccess/>
           </Delay>
           <ChassisTypePublisher chassis_cmd="4"/>
-          <RetryUntilSuccessful num_attempts="-1">
-            <ScriptCondition code="current_hp&gt;0"/>
-          </RetryUntilSuccessful>
+          <Nav2Pose goal="1.39,0.45,0.0,0.0,0.0,0.0,1.0"/>
+        </Sequence>
+
+        <!-- 🔴 死亡状态：不发目标点，等待复活 -->
+        <Sequence _while="alive_status==0">
+          <AlwaysSuccess/>
         </Sequence>
         
         <!-- 🟡 残血巡逻：走完4个点后停留在回血区 -->
-        <SequenceWithMemory _while="current_hp&lt;250&amp;&amp;current_hp&gt;0">
+        <SequenceWithMemory _while="alive_status==1&amp;&amp;current_hp&lt;250&amp;&amp;current_hp&gt;0">
           <ChassisTypePublisher chassis_cmd="2"/>
           
           <Nav2Pose name="LowHP_A" goal="1.39,0.45,0.0,0.0,0.0,0.0,1.0"/>
@@ -89,6 +91,8 @@
     <Action ID="Topics2Blackboard">
       <output_port name="game_progress" type="uint8_t"/>
       <output_port name="current_hp" type="uint16_t"/>
+      <output_port name="alive_status" type="uint8_t"/>
+      <output_port name="revive_event" type="uint8_t"/>
     </Action>
     <Action ID="ChassisTypePublisher">
       <input_port name="chassis_cmd" type="int8_t"/>

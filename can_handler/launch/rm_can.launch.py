@@ -12,6 +12,7 @@ def generate_launch_description():
                 'cmd_vel_topic': '/cmd_vel',
                 'chassis_cmd_id': 0x520,
                 'mode_switch_id': 0x203,
+                'can_device_index': 0,
                 'referee_ids': [0x301, 0x302, 0x303]
             }],
             # 设置日志级别

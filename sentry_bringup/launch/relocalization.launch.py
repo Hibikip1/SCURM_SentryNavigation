@@ -12,6 +12,8 @@ def generate_launch_description():
 
   config_path = os.path.join(
       get_package_share_directory('sentry_bringup'), 'params')
+  ekf_config = os.path.join(
+      get_package_share_directory('cmd_chassis'), 'config', 'ekf_imu.yaml')
   
   # 读取SLAM算法选择配置
   slam_selector_path = os.path.join(config_path, 'slam_selector.yaml')
@@ -42,6 +44,17 @@ def generate_launch_description():
     package='cmd_chassis',
     executable='rot_imu',
     output='screen'
+  )
+
+  ekf_imu_fusion = Node(
+    package='robot_localization',
+    executable='ekf_node',
+    name='ekf_imu_fusion',
+    output='screen',
+    parameters=[ekf_config],
+    remappings=[
+      ('odometry/filtered', '/imu/odometry')
+    ]
   )
  
   sentry_description = IncludeLaunchDescription(
@@ -149,8 +162,9 @@ def generate_launch_description():
 
   ld.add_action(twist2chassis_cmd_node)
   ld.add_action(fake_joint_node)
-  ld.add_action(twist_transformer_node)
   ld.add_action(rot_imu)
+  ld.add_action(ekf_imu_fusion)
+  ld.add_action(twist_transformer_node)
   ld.add_action(sentry_description)
   ld.add_action(mid360_node)
   ld.add_action(map_odom_trans)

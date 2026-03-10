@@ -31,6 +31,19 @@ from nav2_common.launch import RewrittenYaml
 def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory('sentry_bringup')
+    ekf_config = os.path.join(
+        get_package_share_directory('cmd_chassis'), 'config', 'ekf_imu.yaml')
+    ws_root = os.path.abspath(os.path.join(bringup_dir, '..', '..', '..', '..'))
+    non_relocalization_map_link = os.path.join(ws_root, 'non_relocalization_map.yaml')
+    nav2_params_file = os.path.join(bringup_dir, 'params', 'nav2_params.yaml')
+
+    non_relocalization_params = RewrittenYaml(
+        source_file=nav2_params_file,
+        param_rewrites={
+            'yaml_filename': non_relocalization_map_link,
+        },
+        convert_types=True,
+    )
 
     fake_joint_node=Node(
         package='cmd_chassis',
@@ -43,6 +56,17 @@ def generate_launch_description():
         executable='twist_transformer',
         output='screen',
             arguments=['--ros-args', '-p', 'chassis_frame:=chassis_link'],
+    )
+
+    ekf_imu_fusion = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_imu_fusion',
+        output='screen',
+        parameters=[ekf_config],
+        remappings=[
+            ('odometry/filtered', '/imu/odometry')
+        ]
     )
 
     map_odom_trans = Node(
@@ -63,7 +87,10 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(
             bringup_dir,'launch','navigation.launch.py'
             )
-        )
+        ),
+        launch_arguments={
+            'params_file': non_relocalization_params,
+        }.items()
     )
 
     start_decision = IncludeLaunchDescription(
@@ -98,6 +125,7 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     ld.add_action(fake_joint_node)
+    ld.add_action(ekf_imu_fusion)
     ld.add_action(twist_transformer_node)
     ld.add_action(map_odom_trans)
     ld.add_action(mapping)

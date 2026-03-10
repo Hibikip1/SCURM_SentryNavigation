@@ -59,6 +59,7 @@ namespace rm_decision
 
     std::optional<rm_interfaces::msg::GameState> game_state_;
     std::optional<auto_aim_interfaces::msg::Target> target_;
+    std::optional<std::uint8_t> last_alive_status_;
 
     geometry_msgs::msg::Point target_r_map_;
     geometry_msgs::msg::PoseStamped target_pose_;

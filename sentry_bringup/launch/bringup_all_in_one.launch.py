@@ -80,10 +80,16 @@ def generate_launch_description():
         ]
     )
     
+    # rm_can = Node(
+    #     package='can_handler',
+    #     executable='rm_can'
+    # )
+
     ld = LaunchDescription()
 
     ld.add_action(start_relocalization)
     ld.add_action(delayed_start_navigation)
     ld.add_action(delayed_start_decision)  # 不用自动决策的时候这个不用开
     ld.add_action(start_control_panel)
+    #ld.add_action(rm_can)
     return ld

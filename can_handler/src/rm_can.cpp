@@ -287,43 +287,45 @@ void rec_callback(usb_rx_frame_t *frame)
   if (!frame)
     return;
 
-  // 打印所有接收的 CAN 帧（用于诊断/确认已收到）
-  {
-    std::string hex;
-    char buf[8];
-    for (unsigned i = 0; i < frame->head.dlc && i < 64; ++i)
-    {
-      snprintf(buf, sizeof(buf), "%02X", frame->payload[i]);
-      if (!hex.empty())
-        hex += ' ';
-      hex += buf;
-    }
-    RCLCPP_INFO(rclcpp::get_logger("rm_can"), "[REC] ID=0x%X ch=%u dlc=%u data=%s",
-                frame->head.can_id,
-                static_cast<unsigned>(frame->head.channel),
-                static_cast<unsigned>(frame->head.dlc),
-                hex.c_str());
-  }
+  // // 打印所有接收的 CAN 帧（用于诊断/确认已收到）
+  // {
+  //   std::string hex;
+  //   char buf[8];
+  //   for (unsigned i = 0; i < frame->head.dlc && i < 64; ++i)
+  //   {
+  //     snprintf(buf, sizeof(buf), "%02X", frame->payload[i]);
+  //     if (!hex.empty())
+  //       hex += ' ';
+  //     hex += buf;
+  //   }
+  //   RCLCPP_INFO(rclcpp::get_logger("rm_can"), "[REC] ID=0x%X ch=%u dlc=%u data=%s",
+  //               frame->head.can_id,
+  //               static_cast<unsigned>(frame->head.channel),
+  //               static_cast<unsigned>(frame->head.dlc),
+  //               hex.c_str());
+  // }
 
   SentinelCanNode *node = g_node_instance.load(std::memory_order_acquire);
   if (!node || !node->is_params_loaded())
     return;
 
-  // ✅ 策略：对任意帧尝试解析为 GameState（若 dlc >= 3）
-  // 这样接收任何格式的帧都能发布，包括 0x400、0x301 等
-  if (frame->head.dlc >= 3)
+  // ✅ 策略：对任意帧尝试解析为 GameState（若 dlc >= 4）
+  // payload[0]=game_progress, payload[1..2]=current_hp, payload[3]=alive_status
+  if (frame->head.dlc >= 4)
   {
     uint8_t game_progress = frame->payload[0];
     uint16_t current_hp = static_cast<uint16_t>(
         frame->payload[1] | (frame->payload[2] << 8));
+    uint8_t alive_status = frame->payload[3];
 
     auto msg = rm_interfaces::msg::GameState();
     msg.game_progress = game_progress;
     msg.current_hp = current_hp;
+    msg.alive_status = alive_status;
 
     node->get_pub()->publish(msg);
-    RCLCPP_INFO(node->get_logger(), "[PUB] ID=0x%X -> GameState: progress=%d, hp=%d",
-                frame->head.can_id, game_progress, current_hp);
+    RCLCPP_INFO(node->get_logger(), "[PUB] ID=0x%X -> GameState: progress=%d, hp=%d, alive=%d",
+                frame->head.can_id, game_progress, current_hp, alive_status);
   }
 }
 
@@ -336,13 +338,13 @@ void err_callback(usb_rx_frame_t *frame)
   if (!node)
     return;
 
-  RCLCPP_WARN(node->get_logger(),
-              "CAN error frame: id=0x%X ch=%u dlc=%u canfd=%u ack=%u",
-              frame->head.can_id,
-              static_cast<unsigned>(frame->head.channel),
-              static_cast<unsigned>(frame->head.dlc),
-              static_cast<unsigned>(frame->head.canfd),
-              static_cast<unsigned>(frame->head.ack));
+  // RCLCPP_WARN(node->get_logger(),
+  //             "CAN error frame: id=0x%X ch=%u dlc=%u canfd=%u ack=%u",
+  //             frame->head.can_id,
+  //             static_cast<unsigned>(frame->head.channel),
+  //             static_cast<unsigned>(frame->head.dlc),
+  //             static_cast<unsigned>(frame->head.canfd),
+  //             static_cast<unsigned>(frame->head.ack));
 }
 
 int main(int argc, char **argv)
@@ -352,4 +354,4 @@ int main(int argc, char **argv)
   rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
-} // 季之然导航导不出来就导不出来
+} 
