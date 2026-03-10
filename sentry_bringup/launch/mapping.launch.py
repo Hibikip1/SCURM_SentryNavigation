@@ -34,7 +34,12 @@ def generate_launch_description():
   twist2chassis_cmd_node=Node(
     package='cmd_chassis',
     executable='twist2chassis_cmd',
-    parameters=[{'use_sim_time': use_sim_time}],
+    parameters=[
+      {'use_sim_time': use_sim_time},
+      {'twist_topic': '/cmd_vel_in_yaw'},
+      {'chassis_topic': '/chassis_cmd'},
+      {'chassis_type_topic': '/chassis_type'}
+    ],
     output='screen'
   )
   

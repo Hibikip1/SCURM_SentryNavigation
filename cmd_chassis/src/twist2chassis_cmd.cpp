@@ -9,9 +9,9 @@ public:
     CmdChassisNode()
     : Node("twist_to_chassis_cmd")
     {
-        this->declare_parameter<std::string>("twist_topic", "cmd_vel_in_yaw");
-        this->declare_parameter<std::string>("chassis_topic", "chassis_cmd");
-        this->declare_parameter<std::string>("chassis_type_topic", "chassis_type");
+        this->declare_parameter<std::string>("twist_topic", "/cmd_vel_in_yaw");
+        this->declare_parameter<std::string>("chassis_topic", "/chassis_cmd");
+        this->declare_parameter<std::string>("chassis_type_topic", "/chassis_type");
 
         twist_topic_ = this->get_parameter("twist_topic").as_string();
         chassis_topic_ = this->get_parameter("chassis_topic").as_string();
@@ -25,6 +25,10 @@ public:
         chassis_pub_ = this->create_publisher<rm_interfaces::msg::ChassisCmd>(chassis_topic_, 10);
 
         chassis_msg_.type = 2;
+
+        RCLCPP_INFO(this->get_logger(),
+                    "twist2chassis_cmd started: twist_topic=%s, chassis_topic=%s, chassis_type_topic=%s, default_type=%d",
+                    twist_topic_.c_str(), chassis_topic_.c_str(), chassis_type_topic_.c_str(), chassis_msg_.type);
     }
 
 private:

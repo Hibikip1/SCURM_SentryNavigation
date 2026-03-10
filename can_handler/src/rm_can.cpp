@@ -309,24 +309,22 @@ void rec_callback(usb_rx_frame_t *frame)
   if (!node || !node->is_params_loaded())
     return;
 
-  // ✅ 策略：对任意帧尝试解析为 GameState（若 dlc >= 4）
-  // payload[0]=game_progress, payload[1..2]=current_hp, payload[3]=alive_status
-  if (frame->head.dlc >= 4)
-  {
-    uint8_t game_progress = frame->payload[0];
-    uint16_t current_hp = static_cast<uint16_t>(
-        frame->payload[1] | (frame->payload[2] << 8));
-    uint8_t alive_status = frame->payload[3];
+  if (frame->head.can_id != 0x400 || frame->head.dlc < 4)
+    return;
 
-    auto msg = rm_interfaces::msg::GameState();
-    msg.game_progress = game_progress;
-    msg.current_hp = current_hp;
-    msg.alive_status = alive_status;
+  uint8_t game_progress = frame->payload[0];
+  uint16_t current_hp = static_cast<uint16_t>(
+      frame->payload[1] | (frame->payload[2] << 8));
+  uint8_t alive_status = frame->payload[3];
 
-    node->get_pub()->publish(msg);
-    RCLCPP_INFO(node->get_logger(), "[PUB] ID=0x%X -> GameState: progress=%d, hp=%d, alive=%d",
-                frame->head.can_id, game_progress, current_hp, alive_status);
-  }
+  auto msg = rm_interfaces::msg::GameState();
+  msg.game_progress = game_progress;
+  msg.current_hp = current_hp;
+  msg.alive_status = alive_status;
+
+  node->get_pub()->publish(msg);
+  RCLCPP_INFO(node->get_logger(), "[PUB] ID=0x%X -> GameState: progress=%d, hp=%d, alive=%d",
+              frame->head.can_id, game_progress, current_hp, alive_status);
 }
 
 void err_callback(usb_rx_frame_t *frame)
