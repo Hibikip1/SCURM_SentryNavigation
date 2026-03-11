@@ -58,6 +58,11 @@ class ControlPanelGui(QMainWindow):
         self.text12.setText("current_hp")
         self.current_hp = QLineEdit(self)
         self.current_hp.setText("600")
+
+        self.text13=QLabel(self)
+        self.text13.setText("alive_status(0/1)")
+        self.alive_status = QLineEdit(self)
+        self.alive_status.setText("1")
         self.PubGameStatusButton=QPushButton("set game status", self)
         self.PubGameStatusButton.clicked.connect(self.PubGameStatusEvent)
 
@@ -98,6 +103,8 @@ class ControlPanelGui(QMainWindow):
         self.main_layout.addWidget(self.stage_remaining_time)
         self.main_layout.addWidget(self.text12)
         self.main_layout.addWidget(self.current_hp)
+        self.main_layout.addWidget(self.text13)
+        self.main_layout.addWidget(self.alive_status)
         self.main_layout.addWidget(self.text6)
         self.main_layout.addWidget(self.bullet_remaining_num_17mm)
         self.main_layout.addWidget(self.text7)
@@ -138,6 +145,9 @@ class ControlPanelGui(QMainWindow):
             int(self.my_base_hp.text()),
             #uint16 enemy_base_hp
             int(self.enemy_base_hp.text())
+            ,
+            #uint8 alive_status
+            int(self.alive_status.text())
         )
 
     def loop(self):

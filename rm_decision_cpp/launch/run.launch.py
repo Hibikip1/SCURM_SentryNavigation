@@ -34,17 +34,34 @@ from launch_ros.actions import Node,LoadComposableNodes
 from launch_ros.descriptions import ComposableNode
 
 def generate_launch_description():
-    config = os.path.join(
+    default_config = os.path.join(
         get_package_share_directory('rm_decision_cpp'), 'config', 'node_params.yaml')
+    default_tree_xml = '/home/lab/sentry_ws/src/rm_decision_cpp/behavior_tree/24trees/SIM_RMUL.xml'
+
+    params_file_arg = DeclareLaunchArgument(
+        'params_file',
+        default_value=default_config,
+        description='Path to rm_decision_cpp params yaml')
+
+    tree_xml_file_arg = DeclareLaunchArgument(
+        'tree_xml_file',
+        default_value=default_tree_xml,
+        description='BehaviorTree xml file path override')
 
 
     # Create the launch description and populate
     ld = LaunchDescription()
+    ld.add_action(params_file_arg)
+    ld.add_action(tree_xml_file_arg)
+
     demo_cmd = Node(
         package='rm_decision_cpp',
         name='tree_exec',
         executable='tree_exec_node',
-        parameters=[config],
+        parameters=[
+            LaunchConfiguration('params_file'),
+            {'tree_xml_file': LaunchConfiguration('tree_xml_file')}
+        ],
         arguments=['--ros-args', '--log-level', 'info'],
         output='screen')
     ld.add_action(demo_cmd)

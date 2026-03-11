@@ -244,7 +244,7 @@ private:
     if (!can_opened_.load(std::memory_order_acquire) || !dev_)
       return;
 
-    const float scale = 1.0f;
+    const float scale = 1000.0f;
     const auto &twist = msg->twist;
     int16_t vx = static_cast<int16_t>(std::round(twist.linear.x * scale));
     int16_t vy = static_cast<int16_t>(std::round(twist.linear.y * scale));

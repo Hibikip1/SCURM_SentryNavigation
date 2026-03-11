@@ -9,7 +9,7 @@ tree_exec:
 
 # Topics2Blackboard
 
-    game_state_topic_name: "/game_state_sim"
+    game_state_topic_name: "/game_state"
     msg_timeout_s: 2.0
     target_topic_name: "/tracker/target"
 

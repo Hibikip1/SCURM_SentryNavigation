@@ -11,12 +11,13 @@ class Panel_Publisher(Node):
 
     def __init__(self,node_name='control_panel_pub'):
         super().__init__(node_name)
-        self.game_state_publisher_=self.create_publisher(GameState,'game_state_sim',10)
+        self.game_state_publisher_=self.create_publisher(GameState,'/game_state_sim',10)
         self.timer_=self.create_timer(1,self.timer_callback)
 
         
         self.game_state=GameState()
         self.game_state.game_progress=0
+        self.game_state.alive_status=1
         self.game_state.stage_remain_time=32767
         self.game_state.current_hp=700
         self.game_state.projectile_allowance_17mm=400
@@ -25,10 +26,14 @@ class Panel_Publisher(Node):
         self.game_state.my_base_hp=1000
         self.game_state.enemy_base_hp=1000
         
-    def set_game_state(self,game_progress,stage_remain_time,current_hp,projectile_allowance_17mm,my_outpost_hp,enemy_outpost_hp,my_base_hp,enemy_base_hp):
+    def set_game_state(self,game_progress,stage_remain_time,current_hp,projectile_allowance_17mm,my_outpost_hp,enemy_outpost_hp,my_base_hp,enemy_base_hp,alive_status=None):
         self.game_state.game_progress=game_progress
         self.game_state.stage_remain_time=stage_remain_time
         self.game_state.current_hp=current_hp
+        if alive_status is None:
+            self.game_state.alive_status=1 if current_hp > 0 else 0
+        else:
+            self.game_state.alive_status=alive_status
         self.game_state.projectile_allowance_17mm=projectile_allowance_17mm
         self.game_state.my_outpost_hp=my_outpost_hp
         self.game_state.enemy_outpost_hp=enemy_outpost_hp

@@ -36,6 +36,7 @@ def generate_launch_description():
     ws_root = os.path.abspath(os.path.join(bringup_dir, '..', '..', '..', '..'))
     non_relocalization_map_link = os.path.join(ws_root, 'non_relocalization_map.yaml')
     nav2_params_file = os.path.join(bringup_dir, 'params', 'nav2_params.yaml')
+    decision_default_tree = '/home/lab/sentry_ws/src/rm_decision_cpp/behavior_tree/24trees/SIM_RMUL.xml'
 
     non_relocalization_params = RewrittenYaml(
         source_file=nav2_params_file,
@@ -43,6 +44,12 @@ def generate_launch_description():
             'yaml_filename': non_relocalization_map_link,
         },
         convert_types=True,
+    )
+
+    decision_tree_arg = DeclareLaunchArgument(
+        'decision_tree_xml',
+        default_value=decision_default_tree,
+        description='BehaviorTree xml file used by rm_decision_cpp'
     )
 
     fake_joint_node=Node(
@@ -97,7 +104,10 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(
             get_package_share_directory('rm_decision_cpp'),'launch','run.launch.py'
             )
-        )
+        ),
+        launch_arguments={
+            'tree_xml_file': LaunchConfiguration('decision_tree_xml')
+        }.items()
     )
 
     start_control_panel = Node(
@@ -121,8 +131,16 @@ def generate_launch_description():
             start_decision
         ]
     )
+    start_control_panel = Node(
+        package='control_panel',
+        executable='control_panel',
+        output='screen'
+    )
+
     
     ld = LaunchDescription()
+
+    ld.add_action(decision_tree_arg)
 
     ld.add_action(fake_joint_node)
     ld.add_action(ekf_imu_fusion)
@@ -132,4 +150,5 @@ def generate_launch_description():
     ld.add_action(delayed_start_navigation)
     ld.add_action(delayed_start_decision)  # 不用自动决策的时候这个不用开
 
+    ld.add_action(start_control_panel )
     return ld
