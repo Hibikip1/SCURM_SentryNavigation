@@ -38,12 +38,14 @@
 - **输出**: `/imu/odometry` (带真实 orientation 的里程计)
 - **功能**: 用 EKF 算法融合 IMU 数据，估算真实姿态
 
-#### twist_transformer (速度转换节点)
+#### twist_transformer (速度转发/转换节点)
 - **输入**: 
-  - `/cmd_vel` (导航输出，map 坐标系)
-  - `/imu/odometry` (EKF 输出的姿态)
-- **输出**: `/cmd_vel_in_yaw` (云台坐标系速度)
-- **功能**: 根据云台 yaw 角将速度从 map 坐标系转到云台坐标系
+  - `/cmd_vel` (导航输出，**本体坐标系** base_link，即云台/雷达朝向)
+  - `/imu/odometry` (可选，仅当 `use_yaw_transform:=true` 时用于 map→body 变换)
+- **输出**: `/cmd_vel_in_yaw` (底盘/云台坐标系速度)
+- **功能**: 
+  - **默认（推荐）**: 透传。Nav2 的 cmd_vel 已是机器人本体（云台）系，直接转发给底盘，无需再按 yaw 旋转，否则会导致导航转圈。
+  - 可选 `use_yaw_transform:=true`: 将 cmd_vel 视为 map 系，用 EKF 的 yaw 转到云台系（仅当你的 cmd_vel 确实在 map 系时使用）。
 
 ## 使用方法
 
@@ -137,7 +139,9 @@ ros2 run cmd_chassis rot_imu --ros-args \
 - EKF 通过融合这些数据，估算真实的 roll/pitch/yaw
 - 特别是 yaw 角，用于速度坐标系转换
 
-### 速度转换公式
+### 速度与坐标系说明
+- **Nav2 的 cmd_vel**：标准实现中是在**机器人本体坐标系**（base_link，即云台/雷达朝向）下给出的，x 前、y 左、angular.z 绕竖轴。因此云台解算默认只需透传，无需再做 map→body 旋转；否则会错误地多旋转一次，导致导航转圈或乱走。
+- 仅当 cmd_vel 明确在 map 系下输出时，可设 `use_yaw_transform:=true`，此时使用下述公式：
 ```cpp
 // 2D 旋转变换（map坐标系 → 云台坐标系）
 vx_yaw = vx_map * cos(yaw) + vy_map * sin(yaw)
