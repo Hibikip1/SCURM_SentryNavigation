@@ -37,7 +37,7 @@ public:
     this->declare_parameter<std::string>("cmd_vel_topic", "chassis_cmd");
     this->declare_parameter<int>("chassis_cmd_id", 0x520);
     this->declare_parameter<int>("mode_switch_id", 0x203);
-    this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x400, 0x302, 0x303});
+    this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x400});
 
     cmd_vel_topic_ = this->get_parameter("cmd_vel_topic").as_string();
     chassis_cmd_id_ = this->get_parameter("chassis_cmd_id").as_int();

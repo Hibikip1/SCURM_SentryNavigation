@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+
 # Copyright (c) 2018 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,19 +52,6 @@ def generate_launch_description():
         description='BehaviorTree xml file used by rm_decision_cpp'
     )
 
-    fake_joint_node=Node(
-        package='cmd_chassis',
-        executable='fake_joint',
-        output='screen'
-    )
-    
-    twist_transformer_node=Node(
-        package='cmd_chassis',
-        executable='twist_transformer',
-        output='screen',
-            arguments=['--ros-args', '-p', 'chassis_frame:=chassis_link'],
-    )
-
     ekf_imu_fusion = Node(
         package='robot_localization',
         executable='ekf_node',
@@ -110,12 +97,6 @@ def generate_launch_description():
         }.items()
     )
 
-    start_control_panel = Node(
-        package='control_panel',
-        executable='control_panel',
-        output='screen'
-    )
-
     delayed_start_navigation = TimerAction(
         period=10.0,
         actions=[
@@ -142,9 +123,7 @@ def generate_launch_description():
 
     ld.add_action(decision_tree_arg)
 
-    ld.add_action(fake_joint_node)
     ld.add_action(ekf_imu_fusion)
-    ld.add_action(twist_transformer_node)
     ld.add_action(map_odom_trans)
     ld.add_action(mapping)
     ld.add_action(delayed_start_navigation)

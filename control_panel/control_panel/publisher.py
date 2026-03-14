@@ -11,7 +11,7 @@ class Panel_Publisher(Node):
 
     def __init__(self,node_name='control_panel_pub'):
         super().__init__(node_name)
-        self.game_state_publisher_=self.create_publisher(GameState,'/game_state_sim',10)
+        self.game_state_publisher_=self.create_publisher(GameState,'/game_state',10)
         self.timer_=self.create_timer(1,self.timer_callback)
 
         

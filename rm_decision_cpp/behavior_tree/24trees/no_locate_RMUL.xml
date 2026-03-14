@@ -18,13 +18,15 @@
           <Delay delay_msec="2000">
             <AlwaysSuccess/>
           </Delay>
-          
+
           <!-- 4. 切换到小陀螺模式 (SPIN = 4) -->
           <ChassisTypePublisher chassis_cmd="4"/>
-          
-          <!-- 4. 复活后回到回血目标点 -->
+      
+          <!-- 5. 复活后回到回血目标点 -->
           <Nav2Pose goal="0,0,0.0,0.0,0.0,0.0,1.0"/>
         </Sequence>
+          
+
 
         <!-- 🔴 死亡状态：不发目标点，等待复活事件 -->
         <Sequence _while="alive_status==0">
@@ -38,7 +40,9 @@
         
         <!-- 默认巡逻 -->
         <Sequence>
-          <Nav2Pose goal="5.27,-3.28,0.0,0.0,0.0,0.0,1.0"/>
+          <ChassisTypePublisher chassis_cmd="4"/>
+          <Nav2Pose goal="0.0,4.0,0.0,0.0,0.0,0.0,1.0"/>
+          <!--<Nav2Pose goal="5.27,-3.28,0.0,0.0,0.0,0.0,1.0"/>比赛-->
         </Sequence>
         
       </ReactiveFallback>
