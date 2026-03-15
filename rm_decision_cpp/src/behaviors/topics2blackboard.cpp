@@ -49,6 +49,7 @@ namespace rm_decision
         OutputPort<std::uint16_t>("current_hp"),
         OutputPort<std::uint8_t>("game_progress"),
         OutputPort<std::uint8_t>("alive_status"),
+      OutputPort<std::uint8_t>("armor_state"),
         OutputPort<std::uint8_t>("revive_event"),
         OutputPort<std::uint8_t>("death_event"),
         OutputPort<std::uint16_t>("stage_remain_time"),
@@ -87,6 +88,7 @@ namespace rm_decision
     setOutput<std::uint16_t>("current_hp", game_state_->current_hp);
     setOutput<std::uint8_t>("game_progress", game_state_->game_progress);
     setOutput<std::uint8_t>("alive_status", game_state_->alive_status);
+    setOutput<std::uint8_t>("armor_state", game_state_->armor_state);
     setOutput<std::uint8_t>("revive_event", revive_event);
     setOutput<std::uint8_t>("death_event", death_event);
     setOutput<std::uint16_t>("stage_remain_time", game_state_->stage_remain_time);
@@ -152,6 +154,7 @@ namespace rm_decision
       setOutput<std::uint16_t>("current_hp", 0);
       setOutput<std::uint8_t>("game_progress", 0);
       setOutput<std::uint8_t>("alive_status", 0);
+      setOutput<std::uint8_t>("armor_state", 0);
       setOutput<std::uint8_t>("revive_event", 0);
       setOutput<std::uint8_t>("death_event", 0);
       setOutput<std::uint16_t>("stage_remain_time", 0);

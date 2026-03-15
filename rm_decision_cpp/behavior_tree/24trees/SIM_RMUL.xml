@@ -5,25 +5,16 @@
       <Topics2Blackboard game_progress="{game_progress}"
                          current_hp="{current_hp}"
                          alive_status="{alive_status}"
+                         armor_state="{armor_state}"
                          revive_event="{revive_event}"/>
       
       <ReactiveFallback _while="game_progress==4">
         
         <!-- 🔴 复活逻辑：由存活状态边沿(0->1)触发 -->
         <Sequence _while="revive_event==1">
-          <!-- 1. 切换到云台跟随模式 (FOLLOW_GIMBAL = 2) -->
-          <ChassisTypePublisher chassis_cmd="2"/>
-          
-          <!-- 3. 延时 2 秒 -->
-          <Delay delay_msec="2000">
-            <AlwaysSuccess/>
-          </Delay>
-          
-          <!-- 4. 切换到小陀螺模式 (SPIN = 4) -->
-          <ChassisTypePublisher chassis_cmd="4"/>
-          
-          <!-- 4. 复活后回到回血目标点 -->
-          <Nav2Pose goal="1.571483850479126,0.0893896222114563,0.0,0.0,0.0,0.0,1.0"/>
+          <!-- 复活后直接 mode3 回家 -->
+          <ChassisTypePublisher chassis_cmd="3"/>
+          <Nav2Pose goal="-0.29480263590812683,-1.0878512859344482,0.0,0.0,0.0,0.0,1.0"/>
         </Sequence>
 
         <!-- 🔴 死亡状态：不发目标点，等待复活事件 -->
@@ -33,7 +24,13 @@
         
         <!-- 残血回血 -->
         <Sequence _while="current_hp&lt;250&amp;&amp;current_hp&gt;0">
+          <ChassisTypePublisher chassis_cmd="3"/>
           <Nav2Pose goal="-0.29480263590812683,-1.0878512859344482,0.0,0.0,0.0,0.0,1.0"/>
+        </Sequence>
+
+        <!-- 非残血前提下，战斗中暂不发目标点 -->
+        <Sequence _while="armor_state==1">
+          <AlwaysSuccess/>
         </Sequence>
         
         <!-- 默认巡逻 -->
@@ -53,6 +50,7 @@
       <output_port name="game_progress" type="uint8_t">game_progress</output_port>
       <output_port name="current_hp" type="uint16_t">current_hp</output_port>
       <output_port name="alive_status" type="uint8_t">alive_status</output_port>
+      <output_port name="armor_state" type="uint8_t">armor_state</output_port>
       <output_port name="revive_event" type="uint8_t">revive_event</output_port>
     </Action>
     <Action ID="ChassisTypePublisher">

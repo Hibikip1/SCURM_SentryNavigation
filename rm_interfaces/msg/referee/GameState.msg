@@ -1,6 +1,7 @@
 uint16 current_hp
 uint8 game_progress
 uint8 alive_status
+uint8 armor_state
 uint16 stage_remain_time
 uint8 armor_id
 uint8 hurt_type

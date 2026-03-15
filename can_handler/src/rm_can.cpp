@@ -284,47 +284,49 @@ private:
 
 void rec_callback(usb_rx_frame_t *frame)
 {
-  // if (!frame)
-  //   return;
+  if (!frame)
+    return;
 
-  // // // 打印所有接收的 CAN 帧（用于诊断/确认已收到）
-  // // {
-  // //   std::string hex;
-  // //   char buf[8];
-  // //   for (unsigned i = 0; i < frame->head.dlc && i < 64; ++i)
-  // //   {
-  // //     snprintf(buf, sizeof(buf), "%02X", frame->payload[i]);
-  // //     if (!hex.empty())
-  // //       hex += ' ';
-  // //     hex += buf;
-  // //   }
-  // //   RCLCPP_INFO(rclcpp::get_logger("rm_can"), "[REC] ID=0x%X ch=%u dlc=%u data=%s",
-  // //               frame->head.can_id,
-  // //               static_cast<unsigned>(frame->head.channel),
-  // //               static_cast<unsigned>(frame->head.dlc),
-  // //               hex.c_str());
-  // // }
+  // // 打印所有接收的 CAN 帧（用于诊断/确认已收到）
+  // {
+  //   std::string hex;
+  //   char buf[8];
+  //   for (unsigned i = 0; i < frame->head.dlc && i < 64; ++i)
+  //   {
+  //     snprintf(buf, sizeof(buf), "%02X", frame->payload[i]);
+  //     if (!hex.empty())
+  //       hex += ' ';
+  //     hex += buf;
+  //   }
+  //   RCLCPP_INFO(rclcpp::get_logger("rm_can"), "[REC] ID=0x%X ch=%u dlc=%u data=%s",
+  //               frame->head.can_id,
+  //               static_cast<unsigned>(frame->head.channel),
+  //               static_cast<unsigned>(frame->head.dlc),
+  //               hex.c_str());
+  // }
 
-  // SentinelCanNode *node = g_node_instance.load(std::memory_order_acquire);
-  // if (!node || !node->is_params_loaded())
-  //   return;
+  SentinelCanNode *node = g_node_instance.load(std::memory_order_acquire);
+  if (!node || !node->is_params_loaded())
+    return;
 
-  // if (frame->head.can_id != 0x400 || frame->head.dlc < 4)
-  //   return;
+  if (frame->head.can_id != 0x400 || frame->head.dlc < 5)
+    return;
 
-  // uint8_t game_progress = frame->payload[0];
-  // uint16_t current_hp = static_cast<uint16_t>(
-  //     frame->payload[1] | (frame->payload[2] << 8));
-  // uint8_t alive_status = frame->payload[3];
+  uint8_t game_progress = frame->payload[0];
+  uint16_t current_hp = static_cast<uint16_t>(
+      frame->payload[1] | (frame->payload[2] << 8));
+  uint8_t alive_status = frame->payload[3];
+  uint8_t armor_state = frame->payload[4];
 
-  // auto msg = rm_interfaces::msg::GameState();
-  // msg.game_progress = game_progress;
-  // msg.current_hp = current_hp;
-  // msg.alive_status = alive_status;
+  auto msg = rm_interfaces::msg::GameState();
+  msg.game_progress = game_progress;
+  msg.current_hp = current_hp;
+  msg.alive_status = alive_status;
+  msg.armor_state = armor_state;
 
-  // node->get_pub()->publish(msg);
-  // RCLCPP_INFO(node->get_logger(), "[PUB] ID=0x%X -> GameState: progress=%d, hp=%d, alive=%d",
-  //             frame->head.can_id, game_progress, current_hp, alive_status);
+  node->get_pub()->publish(msg);
+  RCLCPP_INFO(node->get_logger(), "[PUB] ID=0x%X -> GameState: progress=%d, hp=%d, alive=%d, armor_state=%d",
+              frame->head.can_id, game_progress, current_hp, alive_status, armor_state);
 }
 
 void err_callback(usb_rx_frame_t *frame)
