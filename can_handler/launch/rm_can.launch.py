@@ -13,7 +13,9 @@ def generate_launch_description():
                 'chassis_cmd_id': 0x520,
                 'mode_switch_id': 0x203,
                 'can_device_index': 0,
-                'referee_ids': [0x301, 0x302, 0x303]
+                'can_tx_channel': 0,
+                'referee_can_channel': 0,  # 只处理通道 0 的裁判数据；若裁判在通道 1 则改为 1，-1 表示两通道都收
+                'referee_ids': [0x400]
             }],
             # 设置日志级别
             arguments=['--ros-args', '--log-level', 'info']

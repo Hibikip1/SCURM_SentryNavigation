@@ -17,7 +17,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, GroupAction, SetEnvironmentVariable, TimerAction
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import LoadComposableNodes
@@ -318,6 +318,8 @@ def generate_launch_description():
         arguments=['-d', rviz_config_file,'--ros-args', '--log-level', 'warn'],
         output='screen'
     )
+    # 延迟启动 RViz，等 map_server 与 costmap（含膨胀层）就绪后再打开，避免膨胀层不显示
+    delayed_start_rviz = TimerAction(period=6.0, actions=[start_rviz])
 
     # Create the launch description and populate
     ld = LaunchDescription()
@@ -341,6 +343,6 @@ def generate_launch_description():
     # Add the actions to launch all of the navigation nodes
     ld.add_action(load_nodes)
     ld.add_action(load_composable_nodes)
-    ld.add_action(start_rviz)
+    ld.add_action(delayed_start_rviz)
 
     return ld
