@@ -327,11 +327,6 @@ private:
   device_handle *dev_;
   std::mutex io_mutex_;
 
-  static constexpr std::chrono::milliseconds kChassisSendMinInterval{25};  // 40Hz 上限，避免 send box 缓冲区满
-  static constexpr std::chrono::milliseconds kModeSendMinInterval{80};
-  std::chrono::steady_clock::time_point last_chassis_send_time_{};
-  std::chrono::steady_clock::time_point last_mode_send_time_{};
-
   rclcpp::Subscription<rm_interfaces::msg::ChassisCmd>::SharedPtr cmd_vel_sub_;
   rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr mode_sub_;
   rclcpp::Publisher<rm_interfaces::msg::GameState>::SharedPtr game_state_pub_;
@@ -358,11 +353,7 @@ private:
     data[7] = wz & 0xFF;
 
     std::lock_guard<std::mutex> lock(io_mutex_);
-    auto now = std::chrono::steady_clock::now();
-    if (now - last_chassis_send_time_ < kChassisSendMinInterval)
-      return;
-    last_chassis_send_time_ = now;
-    device_channel_send_fast(dev_, static_cast<uint8_t>(can_tx_channel_), chassis_cmd_id_, 1, false, false, false, 8, data);
+    device_channel_send_fast(dev_, 0, chassis_cmd_id_, 1, false, false, false, 8, data);
     RCLCPP_INFO(this->get_logger(), "[SEND_REQ] id=0x%X dlc=8 data=%02X %02X %02X %02X %02X %02X %02X %02X",
                 chassis_cmd_id_, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
   }
@@ -376,11 +367,9 @@ private:
     data[0] = msg->data;
 
     std::lock_guard<std::mutex> lock(io_mutex_);
-    auto now = std::chrono::steady_clock::now();
-    if (now - last_mode_send_time_ < kModeSendMinInterval)
-      return;
-    last_mode_send_time_ = now;
-    device_channel_send_fast(dev_, static_cast<uint8_t>(can_tx_channel_), mode_switch_id_, 1, false, false, false, 8, data);
+    device_channel_send_fast(dev_, 0, mode_switch_id_, 1, false, false, false, 8, data);
+    RCLCPP_INFO(this->get_logger(), "[SEND_REQ] id=0x%X dlc=8 data=%02X %02X %02X %02X %02X %02X %02X %02X",
+                mode_switch_id_, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
   }
 };
 
