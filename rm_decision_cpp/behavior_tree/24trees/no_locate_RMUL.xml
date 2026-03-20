@@ -19,10 +19,9 @@
             <AlwaysSuccess/>
           </Delay>
           <ChassisTypePublisher chassis_cmd="4"/>
-          <Nav2Pose goal="0,0,0.0,0.0,0.0,0.0,1.0"/>
+          <Nav2Pose goal="0.0,1.0,0.0,0.0,0.0,0.0,1.0"/>
         </Sequence>
           
-
 
         <!-- 🔴 死亡状态：不发目标点，等待复活事件 -->
         <Sequence _while="alive_status==0">
@@ -30,14 +29,10 @@
         </Sequence>
         
         <!-- 残血回血 -->
-        <Sequence _while="current_hp&lt;150&amp;&amp;current_hp&gt;0">
-          <ChassisTypePublisher chassis_cmd="2"/>
-          
-          <Delay delay_msec="5000">
-            <AlwaysSuccess/>
-          </Delay>
+        <Sequence _while="current_hp&lt;250&amp;&amp;current_hp&gt;0">
+
           <ChassisTypePublisher chassis_cmd="4"/>
-          <Nav2Pose goal="0,0,0.0,0.0,0.0,0.0,1.0"/>
+          <Nav2Pose goal="0.0,1.0,0.0,0.0,0.0,0.0,1.0"/>
         </Sequence>
 
         <!-- 非残血前提下，战斗中暂不发目标点 -->
@@ -48,10 +43,9 @@
         <!-- 默认巡逻 -->
         <Sequence>
           <ChassisTypePublisher chassis_cmd="4"/>
-          <!--<Nav2Pose goal="5.22,-2.43,0.0,0.0,0.0,0.0,1.0"/>-->
+          <Nav2Pose goal="6.22,-2.1,0.0,0.0,0.0,0.0,1.0"/>
           <!-- <Nav2Pose goal="4.36,-3.5,0.0,0.0,0.0,0.0,1.0"/>测试-->
-         ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+        
         </Sequence>
         
       </ReactiveFallback>
