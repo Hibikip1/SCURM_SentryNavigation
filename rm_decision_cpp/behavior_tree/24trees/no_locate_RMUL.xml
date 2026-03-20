@@ -13,7 +13,12 @@
         <!-- 🔴 复活逻辑：由存活状态边沿(0->1)触发 -->
         <Sequence _while="revive_event==1">
           <!-- 复活后直接 mode3 回家 -->
-          <ChassisTypePublisher chassis_cmd="3"/>
+          <ChassisTypePublisher chassis_cmd="2"/>
+          
+          <Delay delay_msec="5000">
+            <AlwaysSuccess/>
+          </Delay>
+          <ChassisTypePublisher chassis_cmd="4"/>
           <Nav2Pose goal="0,0,0.0,0.0,0.0,0.0,1.0"/>
         </Sequence>
           
@@ -25,8 +30,13 @@
         </Sequence>
         
         <!-- 残血回血 -->
-        <Sequence _while="current_hp&lt;250&amp;&amp;current_hp&gt;0">
-          <ChassisTypePublisher chassis_cmd="3"/>
+        <Sequence _while="current_hp&lt;150&amp;&amp;current_hp&gt;0">
+          <ChassisTypePublisher chassis_cmd="2"/>
+          
+          <Delay delay_msec="5000">
+            <AlwaysSuccess/>
+          </Delay>
+          <ChassisTypePublisher chassis_cmd="4"/>
           <Nav2Pose goal="0,0,0.0,0.0,0.0,0.0,1.0"/>
         </Sequence>
 
@@ -38,9 +48,9 @@
         <!-- 默认巡逻 -->
         <Sequence>
           <ChassisTypePublisher chassis_cmd="4"/>
-          <!--<Nav2Pose goal="0.0,4.0,0.0,0.0,0.0,0.0,1.0"/>-->
+          <!--<Nav2Pose goal="5.22,-2.43,0.0,0.0,0.0,0.0,1.0"/>-->
           <!-- <Nav2Pose goal="4.36,-3.5,0.0,0.0,0.0,0.0,1.0"/>测试-->
-         <Nav2Pose goal="5.22,-2.43,0.0,0.0,0.0,0.0,1.0"/>
+         ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         </Sequence>
         

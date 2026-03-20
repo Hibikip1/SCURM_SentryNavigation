@@ -10,6 +10,8 @@
 #include <atomic>
 #include <mutex>
 #include <algorithm>
+#include <cstdlib>
+#include <cctype>
 #include "pub_user.h"
 
 using namespace std::chrono_literals;
@@ -19,6 +21,21 @@ class SentinelCanNode;
 
 // ✅ 全局指针（用于回调函数访问节点）
 static std::atomic<SentinelCanNode *> g_node_instance{nullptr};
+
+namespace
+{
+std::string trim_copy(const std::string &s)
+{
+  auto begin = std::find_if_not(s.begin(), s.end(), [](unsigned char ch)
+                                { return std::isspace(ch); });
+  auto end = std::find_if_not(s.rbegin(), s.rend(), [](unsigned char ch)
+                              { return std::isspace(ch); })
+                 .base();
+  if (begin >= end)
+    return std::string();
+  return std::string(begin, end);
+}
+}
 
 // ✅ 全局回调函数
 void sent_callback(usb_rx_frame_t *frame)
@@ -69,6 +86,7 @@ public:
     this->declare_parameter<int>("chassis_cmd_id", 0x520);
     this->declare_parameter<int>("mode_switch_id", 0x203);
     this->declare_parameter<int>("can_device_index", 0);
+    this->declare_parameter<std::string>("can_device_sn", "");
     this->declare_parameter<int>("can_tx_channel", 0);
     this->declare_parameter<int>("referee_can_channel", 0);  // 只处理该通道的裁判数据；-1=两通道都收
     this->declare_parameter<std::vector<long int>>("referee_ids", std::vector<long int>{0x400});
@@ -77,9 +95,19 @@ public:
     chassis_cmd_id_ = this->get_parameter("chassis_cmd_id").as_int();
     mode_switch_id_ = this->get_parameter("mode_switch_id").as_int();
     can_device_index_ = this->get_parameter("can_device_index").as_int();
+    can_device_sn_ = trim_copy(this->get_parameter("can_device_sn").as_string());
     can_tx_channel_ = this->get_parameter("can_tx_channel").as_int();
     referee_can_channel_ = this->get_parameter("referee_can_channel").as_int();
     referee_ids_ = this->get_parameter("referee_ids").as_integer_array();
+
+    if (const char *env_sn = std::getenv("DM_CAN_DEVICE_SN"))
+    {
+      const auto sn = trim_copy(env_sn);
+      if (!sn.empty())
+      {
+        can_device_sn_ = sn;
+      }
+    }
 
     // if (can_tx_channel_ < 0 || can_tx_channel_ > 1)
     // {
@@ -99,6 +127,10 @@ public:
         cmd_vel_topic_, 10,
         std::bind(&SentinelCanNode::on_cmd_vel, this, std::placeholders::_1));
 
+    chassis_tx_timer_ = this->create_wall_timer(
+      50ms,
+      std::bind(&SentinelCanNode::on_chassis_tx_timer, this));
+
     mode_sub_ = this->create_subscription<std_msgs::msg::UInt8>(
         "sentry_mode_cmd", 10,
         std::bind(&SentinelCanNode::on_mode_cmd, this, std::placeholders::_1));
@@ -116,8 +148,8 @@ public:
       id_list += idbuf;
     }
 
-    RCLCPP_INFO(this->get_logger(), "chassis_cmd_id=0x%X, mode_switch_id=0x%X, can_device_index=%d, can_tx_channel=%d, referee_can_channel=%d, referee_ids=[%s]",
-                chassis_cmd_id_, mode_switch_id_, can_device_index_, can_tx_channel_, referee_can_channel_, id_list.c_str());
+    RCLCPP_INFO(this->get_logger(), "chassis_cmd_id=0x%X, mode_switch_id=0x%X, can_device_index=%d, can_device_sn=%s, can_tx_channel=%d, referee_can_channel=%d, referee_ids=[%s]",
+          chassis_cmd_id_, mode_switch_id_, can_device_index_, can_device_sn_.empty() ? "<empty>" : can_device_sn_.c_str(), can_tx_channel_, referee_can_channel_, id_list.c_str());
     if (referee_can_channel_ >= 0)
       RCLCPP_INFO(this->get_logger(), "0x400 仅接收通道 %d，另一条线的 0x400 不接收", referee_can_channel_);
   }
@@ -154,41 +186,15 @@ public:
                        { return static_cast<uint32_t>(id) == can_id; });
   }
 
-  // 同通道下两条 0x400 时：连续 20 次相同才锁定该源，锁定后该状态每帧都发布（快速连续且无杂数据）
   bool publish_game_state(uint8_t channel, const rm_interfaces::msg::GameState &msg)
   {
     if (referee_can_channel_ >= 0 && static_cast<uint8_t>(referee_can_channel_) != channel)
       return false;
-    std::lock_guard<std::mutex> lock(game_state_mutex_);
-    int gp = static_cast<int>(msg.game_progress);
-    int hp = static_cast<int>(msg.current_hp);
-    int al = static_cast<int>(msg.alive_status);
-    int ar = static_cast<int>(msg.armor_state);
-    bool same_as_candidate = (candidate_progress_ == gp && candidate_hp_ == hp && candidate_alive_ == al && candidate_armor_ == ar);
-    if (!same_as_candidate)
-    {
-      candidate_progress_ = gp;
-      candidate_hp_ = hp;
-      candidate_alive_ = al;
-      candidate_armor_ = ar;
-      candidate_count_ = 1;
-      locked_ = false;
-      return false;
-    }
-    candidate_count_++;
-    if (!locked_)
-    {
-      if (candidate_count_ < kGameStateStableCount)
-        return false;
-      locked_ = true;  // 连续 20 次相同，锁定该源
-    }
     game_state_pub_->publish(msg);
     return true;
   }
 
 private:
-  static constexpr int kGameStateStableCount = 20;
-
   bool init_can_device_with_type(device_def_t type)
   {
     handle_ = damiao_handle_create(type);
@@ -220,17 +226,55 @@ private:
       return false;
     }
 
-    if (can_device_index_ < 0 || can_device_index_ >= handle_cnt || !dev_list[can_device_index_])
+    RCLCPP_INFO(this->get_logger(), "Found %d CAN device(s)", handle_cnt);
+    for (int i = 0; i < handle_cnt; ++i)
     {
-      RCLCPP_ERROR(this->get_logger(),
-                   "Invalid can_device_index=%d, discovered device count=%d (type=%d)",
-                   can_device_index_, handle_cnt, static_cast<int>(type));
-      damiao_handle_destroy(handle_);
-      handle_ = nullptr;
-      return false;
+      char serial[255] = {0};
+      device_get_serial_number(dev_list[i], serial, sizeof(serial));
+      RCLCPP_INFO(this->get_logger(), "  device[%d] sn=%s", i, serial);
     }
 
-    dev_ = dev_list[can_device_index_];
+    int selected_index = -1;
+    if (!can_device_sn_.empty())
+    {
+      for (int i = 0; i < handle_cnt; ++i)
+      {
+        char serial[255] = {0};
+        device_get_serial_number(dev_list[i], serial, sizeof(serial));
+        if (can_device_sn_ == serial)
+        {
+          selected_index = i;
+          break;
+        }
+      }
+
+      if (selected_index < 0)
+      {
+        RCLCPP_ERROR(this->get_logger(), "No device matched can_device_sn=%s", can_device_sn_.c_str());
+        damiao_handle_destroy(handle_);
+        handle_ = nullptr;
+        return false;
+      }
+    }
+    else
+    {
+      selected_index = can_device_index_;
+      if (selected_index < 0 || selected_index >= handle_cnt || !dev_list[selected_index])
+      {
+        RCLCPP_ERROR(this->get_logger(),
+                     "Invalid can_device_index=%d, discovered device count=%d (type=%d)",
+                     can_device_index_, handle_cnt, static_cast<int>(type));
+        damiao_handle_destroy(handle_);
+        handle_ = nullptr;
+        return false;
+      }
+      if (handle_cnt > 1)
+      {
+        RCLCPP_WARN(this->get_logger(), "Multiple devices found but can_device_sn is empty; using index=%d", selected_index);
+      }
+    }
+
+    dev_ = dev_list[selected_index];
 
     if (!device_open(dev_))
     {
@@ -246,7 +290,7 @@ private:
     RCLCPP_INFO(this->get_logger(), "Device version: %s", strBuf);
 
     device_get_serial_number(dev_, strBuf, sizeof(strBuf));
-    RCLCPP_INFO(this->get_logger(), "Device SN: %s", strBuf);
+    RCLCPP_INFO(this->get_logger(), "Selected device[%d] SN: %s", selected_index, strBuf);
 
     if (!device_channel_set_baud_with_sp(dev_, 0, false, 1000000, 1000000, 0.75f, 0.75f))
     {
@@ -308,42 +352,54 @@ private:
   int chassis_cmd_id_;
   int mode_switch_id_;
   int can_device_index_;
+  std::string can_device_sn_;
   int can_tx_channel_;
   int referee_can_channel_;
   std::vector<long int> referee_ids_;
   bool channel_opened_[2]{false, false};
-
-  std::mutex game_state_mutex_;
-  int candidate_progress_{-1};
-  int candidate_hp_{-1};
-  int candidate_alive_{-1};
-  int candidate_armor_{-1};
-  int candidate_count_{0};
-  bool locked_{false};
 
   std::atomic<bool> can_opened_;
   std::atomic<bool> params_loaded_;
   damiao_handle *handle_;
   device_handle *dev_;
   std::mutex io_mutex_;
+  std::mutex cmd_mutex_;
+  rm_interfaces::msg::ChassisCmd latest_cmd_;
+  bool has_latest_cmd_{false};
 
   rclcpp::Subscription<rm_interfaces::msg::ChassisCmd>::SharedPtr cmd_vel_sub_;
   rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr mode_sub_;
   rclcpp::Publisher<rm_interfaces::msg::GameState>::SharedPtr game_state_pub_;
+  rclcpp::TimerBase::SharedPtr chassis_tx_timer_;
 
   void on_cmd_vel(const rm_interfaces::msg::ChassisCmd::SharedPtr msg)
+  {
+    std::lock_guard<std::mutex> lock(cmd_mutex_);
+    latest_cmd_ = *msg;
+    has_latest_cmd_ = true;
+  }
+
+  void on_chassis_tx_timer()
   {
     if (!can_opened_.load(std::memory_order_acquire) || !dev_)
       return;
 
+    rm_interfaces::msg::ChassisCmd cmd;
+    {
+      std::lock_guard<std::mutex> lock(cmd_mutex_);
+      if (!has_latest_cmd_)
+        return;
+      cmd = latest_cmd_;
+    }
+
     const float scale = 1000.0f;
-    const auto &twist = msg->twist;
+    const auto &twist = cmd.twist;
     int16_t vx = static_cast<int16_t>(std::round(twist.linear.x * scale));
     int16_t vy = static_cast<int16_t>(std::round(twist.linear.y * scale));
     int16_t wz = static_cast<int16_t>(std::round(twist.angular.z * scale));
 
     uint8_t data[8] = {0};
-    data[0] = msg->type;
+    data[0] = cmd.type;
     data[1] = 0;
     data[2] = (vx >> 8) & 0xFF;
     data[3] = vx & 0xFF;
@@ -353,9 +409,9 @@ private:
     data[7] = wz & 0xFF;
 
     std::lock_guard<std::mutex> lock(io_mutex_);
-    device_channel_send_fast(dev_, 0, chassis_cmd_id_, 1, false, false, false, 8, data);
-    RCLCPP_INFO(this->get_logger(), "[SEND_REQ] id=0x%X dlc=8 data=%02X %02X %02X %02X %02X %02X %02X %02X",
-                chassis_cmd_id_, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
+    device_channel_send_fast(dev_, can_tx_channel_, chassis_cmd_id_, 1, false, false, false, 8, data);
+    RCLCPP_INFO(this->get_logger(), "[SEND_REQ@10Hz] id=0x%X ch=%d dlc=8 data=%02X %02X %02X %02X %02X %02X %02X %02X",
+                chassis_cmd_id_, can_tx_channel_, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
   }
 
   void on_mode_cmd(const std_msgs::msg::UInt8::SharedPtr msg)
@@ -367,7 +423,7 @@ private:
     data[0] = msg->data;
 
     std::lock_guard<std::mutex> lock(io_mutex_);
-    device_channel_send_fast(dev_, 0, mode_switch_id_, 1, false, false, false, 8, data);
+    device_channel_send_fast(dev_, can_tx_channel_, mode_switch_id_, 1, false, false, false, 8, data);
     RCLCPP_INFO(this->get_logger(), "[SEND_REQ] id=0x%X dlc=8 data=%02X %02X %02X %02X %02X %02X %02X %02X",
                 mode_switch_id_, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
   }

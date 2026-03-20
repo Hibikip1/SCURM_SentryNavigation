@@ -274,7 +274,7 @@ local_costmap:
         footprint_clearing_enabled: True
         # 低矮障碍(如20cm)反射弱、intensity 偏低，0.3 会滤掉导致无膨胀层；改为 0.0 让低反射/零强度点也计入
         max_obstacle_intensity: 2.0
-        min_obstacle_intensity: 0.15
+        min_obstacle_intensity: 0.17
         observation_sources: pointcloud
         pointcloud:  # no frame set, uses frame from message
           topic: /terrain_map # produce error msg: can not compute xxxx, it is fine, just ignore it
