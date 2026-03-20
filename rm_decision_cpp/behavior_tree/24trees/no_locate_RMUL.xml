@@ -2,6 +2,9 @@
 <root BTCPP_format="4">
   <BehaviorTree ID="RMUL_Simple">
     <ReactiveSequence>
+      <RunOnce then_skip="true">
+        <Script code="first_patrol_done:=false"/>
+      </RunOnce>
       <Topics2Blackboard game_progress="{game_progress}"
                          current_hp="{current_hp}"
                          alive_status="{alive_status}"
@@ -35,6 +38,13 @@
           <Nav2Pose goal="0.0,1.0,0.0,0.0,0.0,0.0,1.0"/>
         </Sequence>
 
+        <!-- 首轮满血巡逻：先到目标点，到点后再开启战斗中不发目标点 -->
+        <Sequence _while="current_hp&gt;=250&amp;&amp;first_patrol_done==false">
+          <ChassisTypePublisher chassis_cmd="4"/>
+          <Nav2Pose goal="6.22,-2.1,0.0,0.0,0.0,0.0,1.0"/>
+          <Script code="first_patrol_done:=true"/>
+        </Sequence>
+
         <!-- 非残血前提下，战斗中暂不发目标点 -->
         <Sequence _while="armor_state==1">
           <AlwaysSuccess/>
@@ -43,7 +53,7 @@
         <!-- 默认巡逻 -->
         <Sequence>
           <ChassisTypePublisher chassis_cmd="4"/>
-          <Nav2Pose goal="6.22,-2.1,0.0,0.0,0.0,0.0,1.0"/>
+          <Nav2Pose goal="6.22,-1.6,0.0,0.0,0.0,0.0,1.0"/>
           <!-- <Nav2Pose goal="4.36,-3.5,0.0,0.0,0.0,0.0,1.0"/>测试-->
         
         </Sequence>

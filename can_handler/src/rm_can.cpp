@@ -154,40 +154,16 @@ public:
                        { return static_cast<uint32_t>(id) == can_id; });
   }
 
-  // 同通道下两条 0x400 时：连续 20 次相同才锁定该源，锁定后该状态每帧都发布（快速连续且无杂数据）
+  // 保留通道限制，匹配后直接发布，不再做连续接收过滤
   bool publish_game_state(uint8_t channel, const rm_interfaces::msg::GameState &msg)
   {
     if (referee_can_channel_ >= 0 && static_cast<uint8_t>(referee_can_channel_) != channel)
       return false;
-    std::lock_guard<std::mutex> lock(game_state_mutex_);
-    int gp = static_cast<int>(msg.game_progress);
-    int hp = static_cast<int>(msg.current_hp);
-    int al = static_cast<int>(msg.alive_status);
-    int ar = static_cast<int>(msg.armor_state);
-    bool same_as_candidate = (candidate_progress_ == gp && candidate_hp_ == hp && candidate_alive_ == al && candidate_armor_ == ar);
-    if (!same_as_candidate)
-    {
-      candidate_progress_ = gp;
-      candidate_hp_ = hp;
-      candidate_alive_ = al;
-      candidate_armor_ = ar;
-      candidate_count_ = 1;
-      locked_ = false;
-      return false;
-    }
-    candidate_count_++;
-    if (!locked_)
-    {
-      if (candidate_count_ < kGameStateStableCount)
-        return false;
-      locked_ = true;  // 连续 20 次相同，锁定该源
-    }
     game_state_pub_->publish(msg);
     return true;
   }
 
 private:
-  static constexpr int kGameStateStableCount = 2;
 
   bool init_can_device_with_type(device_def_t type)
   {
@@ -312,14 +288,6 @@ private:
   int referee_can_channel_;
   std::vector<long int> referee_ids_;
   bool channel_opened_[2]{false, false};
-
-  std::mutex game_state_mutex_;
-  int candidate_progress_{-1};
-  int candidate_hp_{-1};
-  int candidate_alive_{-1};
-  int candidate_armor_{-1};
-  int candidate_count_{0};
-  bool locked_{false};
 
   std::atomic<bool> can_opened_;
   std::atomic<bool> params_loaded_;
