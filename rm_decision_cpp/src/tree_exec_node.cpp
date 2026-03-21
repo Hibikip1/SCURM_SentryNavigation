@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 
   //declare parameters
   node->declare_parameter<std::string>("tree_xml_file", "");
-  node->declare_parameter("tick_period_milliseconds", 3000);
+  node->declare_parameter("tick_period_milliseconds", 1000);
   node->declare_parameter("groot_port", 5556);
   node->declare_parameter("tree_node_model_export_path","");
   // topics to blackboard node's param

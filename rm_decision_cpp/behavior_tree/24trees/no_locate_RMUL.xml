@@ -53,7 +53,7 @@
         <!-- 默认巡逻 -->
         <Sequence>
           <ChassisTypePublisher chassis_cmd="4"/>
-          <Nav2Pose goal="6.22,-1.6,0.0,0.0,0.0,0.0,1.0"/>
+          <Nav2Pose goal="6.09,-1.97,0.0,0.0,0.0,0.0,1.0"/>
           <!-- <Nav2Pose goal="4.36,-3.5,0.0,0.0,0.0,0.0,1.0"/>测试-->
         
         </Sequence>
