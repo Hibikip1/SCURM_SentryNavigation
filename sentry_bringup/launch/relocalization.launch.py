@@ -99,22 +99,27 @@ def generate_launch_description():
           {'initial_z':0.0},
           {'initial_a':0.0},
 
-          {'map_voxel_leaf_size':0.5},
-          {'cloud_voxel_leaf_size':0.3},
+          # 地图/扫描体素要小于 ICP 的精细层对应距离，否则 ICP 拿不到足够的对应点
+          {'map_voxel_leaf_size':0.2},
+          {'cloud_voxel_leaf_size':0.2},
           {'map_frame_id':'map'},
-          {'solver_max_iter':100},
-          {'max_correspondence_distance':0.1},
+          {'solver_max_iter':30},          # 每一级对应距离迭代 30 次
+          # 多分辨率：由粗到细。第一级必须 >= 初值可能的误差，否则 ICP 拉不动
+          {'correspondence_levels':[1.0, 0.5, 0.25]},
+          {'max_correspondence_distance':0.1},  # 未设置 correspondence_levels 时的兜底值
           {'RANSAC_outlier_rejection_threshold':0.5},
           # {'map_path':'/home/sentry_ws/src/sentry_bringup/maps/CC#0.pcd'},
           {'map_path':'/home/lab/sentry_ws/test.pcd'},
-          {'fitness_score_thre':0.9}, # 是最近点距离的平均值，越小越严格
-          {'converged_count_thre':40}, # pcl pub at 20 hz, 2s
+          # --- 判定：内点率 + 内点 RMSE（PCL 的 fitness 不参与判定）---
+          {'blind':0.5},                   # 近处裁剪，去掉机器人自身点
+          {'inlier_dist':0.2},             # 最近邻 < 0.2 m 记为内点
+          {'min_inlier_ratio':0.65},       # 内点率 >= 65%
+          {'max_rmse':0.15},               # 内点 RMSE <= 15 cm
+          {'max_median_dist':0.15},        # 最近邻中位数 <= 15 cm（卡旋转错误）
+          {'converged_count_thre':5},      # 连续 5 帧达标才发布（10 Hz 下 0.5 s）
           {'pcl_type':'livox'},  # 订阅原始雷达数据
-          # 外参矫正 - 45度倾斜安装
-          {'extrinsic_T': [-0.011, -0.02329, 0.04412]},
-          {'extrinsic_R': [1.0, 0.0, 0.0,
-                           0.0, 1.0, 0.0,
-                           0.0, 0.0, 1.0]},
+          # 注：extrinsic_T/extrinsic_R 曾被写在这里，但 icp_node 从未声明/使用它们（旧代码里的
+          # 外参补偿已被删除）。如需补偿雷达安装角度，必须在节点里真正实现，写参数没有作用。
       ],
   )
   

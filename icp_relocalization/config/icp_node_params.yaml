@@ -1,59 +1,40 @@
-# ICP重定位节点优化配置示例
-# 针对Mid360激光雷达内置IMU漂移问题的改进
+# icp_node 参数示例（与 src/icp_node.cpp 中 declare_parameter 一一对应）
+#
+# 判定逻辑：不再使用 PCL 的 getFitnessScore()。
+#   它返回的是"所有源点最近邻距离平方的平均值"，没有上限、没有内点比例，
+#   一个肉眼完全对齐的结果只要有 5% 的点落在先验地图之外就会到 2.0 以上，
+#   跟固定阈值比较没有任何意义。
+#   现在用：内点率 + 内点 RMSE + 最近邻中位数 三个条件同时满足。
 
 icp_node:
   ros__parameters:
-    # 初始位置参数
+    # 初始位姿（相对于先验地图 map 坐标系）
     initial_x: 0.0
     initial_y: 0.0
     initial_z: 0.0
     initial_a: 0.0
-    
-    # ICP求解参数
-    solver_max_iter: 75
-    max_correspondence_distance: 0.1
-    RANSAC_outlier_rejection_threshold: 1.0
-    
-    # 地图参数
-    map_path: "/path/to/your/map.pcd"
+
+    # 地图
+    map_path: "/home/lab/sentry_ws/test.pcd"
     map_frame_id: "map"
-    map_voxel_leaf_size: 0.1
-    
-    # 点云下采样参数
-    cloud_voxel_leaf_size: 0.1
-    
-    # 收敛判定参数
-    fitness_score_thre: 0.0
-    converged_count_thre: 20
-    
-    # 传感器类型
-    pcl_type: "livox"
-    
-    # 外参标定参数 (3x3旋转矩阵 + 3D平移向量)
+    map_voxel_leaf_size: 0.2      # 必须 <= 精细层对应距离，否则拿不到足够对应点
 
-    extrinsic_R: [ 1., 0., 0.,
-                            0., 1., 0.,
-                            0., 0., 1.]
+    # 扫描
+    cloud_voxel_leaf_size: 0.2
 
-    extrinsic_T: [0.0, 0.0, 0.0]
-    
-    # ===== 新增优化参数 =====
-    
-    # 退化运动检测
-    enable_degenerate_detection: true
-    degenerate_motion_threshold: 0.05  # 单位：米，纯旋转判定的平移阈值
-    
-    # 关键帧机制
-    enable_keyframe_mechanism: true
-    keyframe_min_translation: 0.1      # 单位：米，相邻关键帧最小平移距离
-    keyframe_min_rotation: 0.05        # 单位：弧度（约3度），相邻关键帧最小旋转角度
-    
-    # 时间同步
-    enable_time_sync: true
-    enable_imu_subscription: true      # 是否订阅IMU话题用于时间同步和漂移监测
-    
-    # 地图权重因子（在退化场景下增加）
-    map_weight_factor: 1.0
+    # 多分辨率 ICP：由粗到细，第一级要 >= 初值可能的误差
+    correspondence_levels: [1.0, 0.5, 0.25]
+    solver_max_iter: 30           # 每一级对应距离的迭代次数
+    max_correspondence_distance: 0.5   # 未设置 correspondence_levels 时的兜底
+    RANSAC_outlier_rejection_threshold: 0.5   # RANSAC 迭代数为 0，实际不生效
 
-   
+    # 质量判定
+    blind: 0.5                    # 近处裁剪半径，去掉机器人自身的点
+    inlier_dist: 0.2              # 最近邻 < 0.2 m 记为内点
+    min_inlier_ratio: 0.65        # 内点率下限
+    max_rmse: 0.15                # 内点 RMSE 上限 (m)
+    max_median_dist: 0.15         # 最近邻中位数上限 (m)，用来卡住"原地转错角度"
+    converged_count_thre: 5       # 连续 N 帧达标才发布
 
+    # 传感器
+    pcl_type: "livox"             # livox: 订阅 /livox/lidar(CustomMsg)；其它: /pointcloud2
