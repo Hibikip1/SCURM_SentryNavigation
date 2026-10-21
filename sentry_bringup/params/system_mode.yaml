@@ -1,5 +1,5 @@
 mode: real         # sim 或 real
-use_sim_time: true
+use_sim_time: false
 
 # 建图 / 导航统一使用的话题
 lid_topic: "/livox/lidar"
